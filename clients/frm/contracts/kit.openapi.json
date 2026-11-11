@@ -35,7 +35,10 @@
                       "type": "boolean"
                     },
                     "auth_method": {
-                      "const": "sites_ingress"
+                      "enum": [
+                        "sites_ingress",
+                        "delegated_oauth"
+                      ]
                     },
                     "operations": {
                       "type": "object",
@@ -713,7 +716,7 @@
                     },
                     "download_path": {
                       "type": "string",
-                      "pattern": "^/api/v1/kit/workspace/export\\?snapshot_id=kit_[a-f0-9]{64}$"
+                      "pattern": "^/(?:api/v1/kit|agent/kit)/workspace/export\\?snapshot_id=kit_[a-f0-9]{64}$"
                     },
                     "review_status": {
                       "enum": [
@@ -1201,5 +1204,10 @@
         "description": "Platform authentication marker. The Sites gateway verifies the visitor before injecting the site-scoped identity. Not an API-key or identity-header login. No standalone external-client OAuth flow is implemented."
       }
     }
+  },
+  "x-customer-oauth": {
+    "resource": "https://fortrockmedia.com/agent/mcp",
+    "setup": "https://fortrockmedia.com/agent/connections",
+    "description": "Customer delegated MCP is separate from the native Sites REST routes in this contract. Export manifests use a bearer-protected /agent/kit/workspace/export path."
   }
 }

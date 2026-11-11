@@ -11,7 +11,7 @@ Both work without a purchase, API key or account connection. They use your exist
 
 View the verified skills.sh detail pages: [Check your first agent job](https://skills.sh/shane-neeley/agent-companion-skills/check-agent-job) · [BoomScrolling response drafts](https://skills.sh/shane-neeley/agent-companion-skills/boomscrolling-response-drafts).
 
-The separate [open-source agent client and CLI examples](clients/frm/README.md) show how an already-authorized host can call the product APIs. They are optional developer tools, not part of either local skill.
+The separate [open-source agent client and CLI](clients/frm/README.md) connect your product account from Claude or your own agent using customer OAuth. They are optional developer tools, not part of either local skill.
 
 ## Install one skill
 

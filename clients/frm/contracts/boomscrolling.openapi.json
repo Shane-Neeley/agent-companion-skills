@@ -154,7 +154,7 @@
                       "additionalProperties": false
                     },
                     "delegatedOAuth": {
-                      "const": false
+                      "type": "boolean"
                     },
                     "requestId": {
                       "type": "string",
