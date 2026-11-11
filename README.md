@@ -11,6 +11,8 @@ Both work without a purchase, API key or account connection. They use your exist
 
 View the verified skills.sh detail pages: [Check your first agent job](https://skills.sh/shane-neeley/agent-companion-skills/check-agent-job) · [BoomScrolling response drafts](https://skills.sh/shane-neeley/agent-companion-skills/boomscrolling-response-drafts).
 
+The separate [open-source agent client and CLI examples](clients/frm/README.md) show how an already-authorized host can call the product APIs. They are optional developer tools, not part of either local skill.
+
 ## Install one skill
 
 Use an agent that supports `SKILL.md` and can read and write files in your chosen project. The optional duplicate checker needs Python 3.9 or later. The installer needs Node.js; check the [current CLI prerequisites](https://github.com/vercel-labs/skills#install-a-skill).
