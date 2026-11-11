@@ -19,7 +19,7 @@ The demo is fictional and makes no network request. It shows the proposed-respon
 
 ## Use an authorized connection
 
-Connect the product through its supported Sites-managed MCP plugin. Current production connection support is ChatGPT/Codex through that managed flow. Arbitrary standalone clients and Claude connections still need a supported, tested delegated-auth route. This package does not implement login, mint tokens, impersonate identity headers, or reuse provider subscription credentials.
+The first connected release is an internal pilot using the existing Sites-managed MCP plugin in ChatGPT/Codex. A public customer plugin listing is not published by this repository. Arbitrary standalone clients and Claude connections still need a supported, tested delegated-auth route. This package does not implement login, mint tokens, impersonate identity headers, or reuse provider subscription credentials.
 
 Inside an agent host or integration that already has an authorized MCP connection, supply its tool caller:
 
