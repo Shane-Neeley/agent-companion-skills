@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Connect the agent you already use, verify three private drafts, then choose a draft-only schedule. The setup prompt and customer guide come before the technical instructions.
+
 - Schema help accepts the same command names you use in the CLI, including post, post-status and connect-x.
 
 - Tell your connected agent to tweet exact supplied text now, or use the CLI’s explicit post command. It checks the connected account and posting readiness, keeps a stable request record, and looks up uncertain outcomes without another send. Draft drops and unattended writing stay separate.

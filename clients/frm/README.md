@@ -1,8 +1,18 @@
 # FRM agent client
 
-Your agent does the writing with the tools and knowledge it already has. This MIT JavaScript client connects it to BoomScrolling or the Fort Rock Media Agent Setup Kit, so it can read and manage permitted workspace content, return work you can review, and inspect account readiness.
+Your agent does the writing with the tools and knowledge it already has. Review its drafts in BoomScrolling. This folder has the CLI and JavaScript client for connecting a script or terminal agent.
 
-You keep your usual model access and usage limits. This client needs no model-provider API key. Product sign-in connects the account that owns your saved work.
+## Start here
+
+If you want your agent to write for BoomScrolling, [connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/) and [copy the setup prompt](../../docs/boomscrolling-setup.md#copy-this-into-your-agent). It walks through three private drafts and verifies that they arrived in Yours. After that, choose when you want fresh drafts in the [schedule guide](https://boomscrolling.fortrockmedia.com/studio/agents/#schedule).
+
+You'll need an agent you can connect and a BoomScrolling account with writer access. Access is currently available to the owner pilot and verified paid accounts. New sales are off; installing the client does not add account access.
+
+## For your agent
+
+Use a working host connection when one is already available. The CLI below is another way to connect; the normal writer login is enough for the private draft test. Full access and publishing permissions are separate optional choices.
+
+This MIT client connects to BoomScrolling or the Fort Rock Media Agent Setup Kit to read and manage permitted workspace content, return work for review and inspect account readiness. You keep your usual model access and usage limits. It needs no model-provider API key. Product sign-in connects the account that owns your saved work.
 
 The two free local skills elsewhere in this repository remain independent and disconnected. This folder contains no paid guide, server implementation, customer data or model credentials.
 
@@ -38,7 +48,7 @@ node clients/frm/cli.mjs boom submit-candidates @/absolute/private/path/candidat
 node clients/frm/cli.mjs boom writer-context '{"candidateIds":["your-stable-candidate-id"]}'
 ```
 
-Open [BoomScrolling → Yours](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT account. Your drafts should be there. Change a sentence or pass; the next writing run can read that choice. The connection saves private drafts, and publishing remains your separate choice. Installing the client or plugin does not grant writer access; new paid sales remain closed while we dogfood the first account.
+Open [BoomScrolling → Yours](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT account. Your drafts should be there. Change a sentence or pass; the next writing run can read that choice. The connection saves private drafts, and publishing remains your separate choice.
 
 Use `node clients/frm/cli.mjs status boom` to check the connection and `node clients/frm/cli.mjs logout boom` to disconnect. The details below cover other hosts, images, SDK use and recovery.
 
@@ -291,7 +301,7 @@ The generator copies only operation schemas/metadata, typed inputs/outputs and t
 
 ## Tweet exact text now
 
-For an explicit request such as “use BoomScrolling and tweet this now,” the CLI can publish the exact supplied original text once. It does not publish a queued draft, promote a Like or infer consent from an unattended writer run.
+Immediate posting is currently an owner-pilot feature, subject to server readiness. For an explicit request such as “use BoomScrolling and tweet this now,” the CLI can publish the exact supplied original text once. It does not publish a queued draft, promote a Like or infer consent from an unattended writer run.
 
 Read the existing connection first. Do not automatically disconnect a working grant to add permission. When the connection lacks publication permission, the user must review that exact additional consent through their normal agent/CLI login flow. A narrowly scoped new connection can request `boom.account.read,boom.publication.write`; `--full` includes the current 17 permissions. Existing logins and refreshes keep their original scopes.
 
