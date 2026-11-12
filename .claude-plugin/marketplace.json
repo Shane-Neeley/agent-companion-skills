@@ -1,8 +1,16 @@
 {
   "name": "fort-rock-media",
   "description": "Connect your existing agent to your private BoomScrolling writing feed.",
-  "owner": {"name": "Fort Rock Media", "url": "https://fortrockmedia.com"},
+  "owner": {
+    "name": "Fort Rock Media",
+    "url": "https://fortrockmedia.com"
+  },
   "plugins": [
-    {"name": "boomscrolling-writer", "source": "./plugins/boomscrolling-writer", "description": "Write into your private feed using your existing agent.", "version": "0.1.0"}
+    {
+      "name": "boomscrolling-writer",
+      "source": "./plugins/boomscrolling-writer",
+      "description": "Write into your private feed or explicitly post supplied original text now.",
+      "version": "0.2.0"
+    }
   ]
 }

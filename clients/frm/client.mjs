@@ -1,3 +1,4 @@
+import {validatePostInput} from './post-input.mjs';
 import {BOOM_OPERATIONS,BOOM_OPERATION_SCOPES} from './operations.mjs';
 export {BOOM_OPERATIONS} from './operations.mjs';
 // A host supplies an already-authorized MCP call. Credentials stay in the host.
@@ -19,6 +20,22 @@ export function createClient(callTool,{listTools,requestOperation}={}) {
   async function boomCall(name,args={}) {
     if(!Object.hasOwn(BOOM_OPERATION_SCOPES,name))throw new TypeError('Unknown BoomScrolling operation. Update the contract snapshot or use a supported operation.');
     return call(name,args);
+  }
+  async function postNow(args) {
+    args=validatePostInput(args);
+    const preflightError=message=>Object.assign(new Error(message),{publicationAttempted:false});
+    let current;try{current=await boomCall('get_account_status');}catch(error){error.publicationAttempted=false;throw error;}
+    const immediate=current?.publication?.immediate;
+    if(immediate?.ready!==true)throw preflightError(immediate?.reason||'Immediate posting is unavailable for this connected account.');
+    if(!immediate.target?.userId||String(immediate.target.userId)!==args.targetAccountId)throw preflightError('The connected numeric X account differs from this requested target. Read account status before publishing.');
+    let result;try{result=await boomCall('publish_post',args);}catch(error){error.publicationAttempted=error.resourceRequestSent!==false&&error.result?.structuredContent?.code!=='SCOPE_REQUIRED';throw error;}
+    const resultError=message=>Object.assign(new Error(message),{publicationAttempted:true});
+    if(result?.requestId!==args.requestId||result?.targetAccountId!==args.targetAccountId||result?.text!==args.text)throw resultError('The publication result does not match the exact request. Inspect its status; do not resend.');
+    if(result.status==='confirmed') {
+      const receipt=result.receipt;
+      if(!receipt||!/^[a-f0-9]{64}$/.test(result.requestHash||'')||receipt.requestHash!==result.requestHash||receipt.accountId!==args.targetAccountId||receipt.textVerified!==true||!['bound-create-response','verified-post-readback'].includes(receipt.evidence)||typeof receipt.postId!=='string'||!/^\d+$/.test(receipt.postId)||receipt.url!=='https://x.com/i/status/'+receipt.postId)throw resultError('The publication receipt is not bound to the exact requested text/account. Inspect status; do not resend.');
+    }
+    return result;
   }
   async function readMedia({key}, {maxBytes=5*1024*1024}={}) {
     if(!Number.isSafeInteger(maxBytes)||maxBytes<1||maxBytes>5*1024*1024)throw new TypeError('Media downloads are limited to 5 MiB.');
@@ -42,7 +59,7 @@ export function createClient(callTool,{listTools,requestOperation}={}) {
   }
   return Object.freeze({
     boom:Object.freeze({...Object.fromEntries(Object.entries(BOOM_OPERATIONS).map(([method,operation])=>[method,(args={})=>boomCall(operation.name,args)])),
-      call:boomCall,rest:async(name,args={})=>{if(!Object.hasOwn(BOOM_OPERATION_SCOPES,name))throw new TypeError('Unknown BoomScrolling operation.');if(!requestOperation)throw new TypeError('Supply the authorized product REST transport.');return requestOperation(name,args);},readMedia,tools:async()=>listTools?listTools():{tools:Object.values(BOOM_OPERATIONS),source:'contract_snapshot'}}),
+      call:boomCall,postNow,rest:async(name,args={})=>{if(!Object.hasOwn(BOOM_OPERATION_SCOPES,name))throw new TypeError('Unknown BoomScrolling operation.');if(!requestOperation)throw new TypeError('Supply the authorized product REST transport.');return requestOperation(name,args);},readMedia,tools:async()=>listTools?listTools():{tools:Object.values(BOOM_OPERATIONS),source:'contract_snapshot'}}),
     kit:Object.freeze({capabilities:()=>call('kit_get_capabilities'),context:()=>call('kit_get_workspace_context'),manifest:()=>call('kit_get_export_manifest')}),
   });
 }

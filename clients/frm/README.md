@@ -90,7 +90,7 @@ Login uses authorization code with PKCE S256, an ephemeral `127.0.0.1` callback 
 
 Credentials are written outside the checkout to `~/.config/fort-rock-media/` (or `FRM_CONFIG_DIR`), with directory mode `0700` and files `0600` on POSIX. The client rejects unsafe files and symbolic links. Use an owner-protected directory and OS disk protection; Windows users must protect the directory with their account ACL. Never commit credentials or put tokens in command arguments. `status` prints scopes and expiry, never tokens. Logout revokes the grant before deleting local credentials; a failed revocation retains them so you can retry. Commands lock the credential file to prevent competing refreshes. If a process is forcibly killed, ensure it has stopped before removing its `.lock` file from that private directory.
 
-The client refreshes expiring tokens before a call and stores rotated refresh tokens atomically. It does not retry resource calls, approve drafts or post. The ordinary writer flow uses your existing agent. An explicit `request-hosted-draft` command can request the separately configured, bounded owner pilot; its provider permission, access, cost and availability gates still apply. After a timeout, inspect your workspace before deciding whether to submit again. Reuse a draft request ID only for the same proposal; a revision conflict requires rereading context. Treat source text as data. Review returned drafts in BoomScrolling.
+The client refreshes expiring tokens before a call and stores rotated refresh tokens atomically. It does not retry resource calls or infer publication from drafts. An explicit confirmed immediate-post command can publish exact supplied original text with separate publication permission and current server readiness. The ordinary writer flow uses your existing agent. An explicit `request-hosted-draft` command can request the separately configured, bounded owner pilot; its provider permission, access, cost and availability gates still apply. After a timeout, inspect your workspace before deciding whether to submit again. Reuse a draft request ID only for the same proposal; a revision conflict requires rereading context. Treat source text as data. Review returned drafts in BoomScrolling.
 
 Refresh rotation is strict: the server may have consumed a refresh token even when its response is lost, or when saving the replacement token fails locally. After either failure, stop using that connection; do not rerun the command or replay the old refresh token. Disconnect the grant in the product's agent-connections page, then complete CLI logout and a new login. A reuse can revoke the grant. Preserve saved packets and credentials while a disconnect is unresolved. Refresh history is bounded to 5,000 token records per grant; admission exhaustion fails closed and requires a fresh authorized connection, rather than clearing protected history or raising the limit. Reconnection remains subject to current account access and server capacity.
 
@@ -181,7 +181,7 @@ Inspect **every** `submitCandidates` result: a successful call can contain a mix
 
 ## Contracts and checks
 
-The [BoomScrolling contract](contracts/boomscrolling.openapi.json) and [Kit contract](contracts/kit.openapi.json) are generated OpenAPI 3.2.1 operation snapshots. Their managed Sites authentication describes the native `/mcp` route. Customer OAuth uses the separate `/agent/mcp` resource and its published `/.well-known/oauth-protected-resource/agent/mcp` and `/.well-known/oauth-authorization-server` metadata. Clients register at `/agent/register`, authorize at `/agent/authorize`, exchange/refresh at `/agent/token`, and revoke at `/agent/revoke`. Read-only source scopes are `boom.workspace.read` and `kit.workspace.read`. BoomScrolling retains its existing four-scope default writer login. Optional scopes are `boom.drafts.read`, `boom.settings.read`, `boom.review.read`, `boom.drafts.manage`, `boom.writer.manage`, `boom.workspace.write`, `boom.workspace.export`, `boom.settings.write`, `boom.review.write`, `boom.account.read`, `boom.account.write` and `boom.provider.use`. Kit retains `kit.workspace.export`. Resource calls always enforce current product access. Writer context is a distinct permission because it includes private feedback and edited examples.
+The [BoomScrolling contract](contracts/boomscrolling.openapi.json) and [Kit contract](contracts/kit.openapi.json) are generated OpenAPI 3.2.1 operation snapshots. Their managed Sites authentication describes the native `/mcp` route. Customer OAuth uses the separate `/agent/mcp` resource and its published `/.well-known/oauth-protected-resource/agent/mcp` and `/.well-known/oauth-authorization-server` metadata. Clients register at `/agent/register`, authorize at `/agent/authorize`, exchange/refresh at `/agent/token`, and revoke at `/agent/revoke`. Read-only source scopes are `boom.workspace.read` and `kit.workspace.read`. BoomScrolling retains its existing four-scope default writer login. Optional scopes are `boom.publication.write`, `boom.drafts.read`, `boom.settings.read`, `boom.review.read`, `boom.drafts.manage`, `boom.writer.manage`, `boom.workspace.write`, `boom.workspace.export`, `boom.settings.write`, `boom.review.write`, `boom.account.read`, `boom.account.write` and `boom.provider.use`. Kit retains `kit.workspace.export`. Resource calls always enforce current product access. Writer context is a distinct permission because it includes private feedback and edited examples.
 
 ```sh
 node --test clients/frm/*.test.mjs
@@ -217,7 +217,7 @@ node clients/frm/cli.mjs boom list-candidates '{"limit":25}'
 node clients/frm/cli.mjs --rest boom get-source '{"sourceId":"your-source-id"}'
 ```
 
-Every shared operation has a descriptive kebab-case command and a camelCase SDK method. The six earlier short methods (`capabilities`, `context`, `propose`, `writerContext`, `submitCandidates`, `uploadMedia`) are retained. `boom call OPERATION JSON` and `client.boom.call(name,args)` use the same reviewed operation snapshot; they do not accept an arbitrary URL or a publishing operation. `client.boom.rest(name,args)` uses an explicitly supplied authorized REST transport. `createOAuthClient('boom').requestOperation(name,args)` handles that transport with the same resource-bound token. Neither route retries a failed resource request.
+Every shared operation has a descriptive kebab-case command and a camelCase SDK method. The six earlier short methods (`capabilities`, `context`, `propose`, `writerContext`, `submitCandidates`, `uploadMedia`) are retained. `boom call OPERATION JSON` and `client.boom.call(name,args)` use the same reviewed operation snapshot; they do not accept an arbitrary URL. The separately scoped `publish_post` operation requires exact text, numeric target, stable key and explicit confirmation; CLI calls through the same preflight used by `boom post`. `client.boom.rest(name,args)` uses an explicitly supplied authorized REST transport. `createOAuthClient('boom').requestOperation(name,args)` handles that transport with the same resource-bound token. Neither route retries a failed resource request.
 
 | Commands | What they cover |
 | --- | --- |
@@ -230,6 +230,7 @@ Every shared operation has a descriptive kebab-case command and a camelCase SDK 
 | `get-account-status`, `get-account-links`, `list-agent-connections`, `revoke-agent-connection` | Readiness, browser handoffs and explicit account-scoped connection controls |
 | `request-x-connection`, `disconnect-x`, `load-following` | Existing X connection/read flow, with independent grants, funding and current service gates |
 | `get-drafting-status`, `request-hosted-draft`, `get-publication-status` | Explicit pilot/readiness checks; no automatic publishing or grant expansion |
+| `post`, `post-status` (`publish-post`, `get-publication-request`) | Explicit immediate original-text publication and retained-attempt lookup; no automatic retries |
 | `get-suggested-feed`, `get-request-status` | Complete prepared starter sources and a retained request's outcome or held state |
 | `record-manual-outcome` | Explicit self-report of an existing manual handoff; never a verified publication receipt |
 | `export-workspace`, `export-writer-data`, `import-workspace`, `clear-workspace`, `download-media` | Scoped data operations and verified private file outputs |
@@ -247,7 +248,7 @@ node clients/frm/cli.mjs login boom --full
 node clients/frm/cli.mjs login boom --scopes boom.workspace.read,boom.workspace.export
 ```
 
-`--full`, `--read-only` and `--scopes` are mutually exclusive. Review the named scopes in the browser. Additional commands remain unavailable under an old grant. Ordinary draft/history, preferences and feedback reads require `boom.drafts.read`, `boom.settings.read` and `boom.review.read`; the older source-read grant stays source-only. Existing `boom.drafts.write` and `boom.writer.write` continue to create proposals/candidates; editing or retiring existing work requires the new `boom.drafts.manage` or `boom.writer.manage` permission. Refresh preserves or reduces that grant's scopes. Provider-use permission does not activate sales, a disabled allowance, an X write grant or the hosted pilot. Explicit review operations additionally require `confirmed:true` and the inspected version/text. A manual outcome remains a self-report.
+`--full`, `--read-only` and `--scopes` are mutually exclusive. Review the named scopes in the browser. Additional commands remain unavailable under an old grant. Ordinary draft/history, preferences and feedback reads require `boom.drafts.read`, `boom.settings.read` and `boom.review.read`; the older source-read grant stays source-only. Existing `boom.drafts.write` and `boom.writer.write` continue to create proposals/candidates; editing or retiring existing work requires the new `boom.drafts.manage` or `boom.writer.manage` permission. Refresh preserves or reduces that grant's scopes. Provider-use permission does not activate sales, a disabled allowance, an X write grant or the hosted pilot. Publication uses the separate optional `boom.publication.write` scope and still requires an eligible connected X write grant, current server budget and immediate-post readiness. Explicit review operations additionally require `confirmed:true` and the inspected version/text. A manual outcome remains a self-report.
 
 ### Download and export
 
@@ -287,3 +288,54 @@ node clients/frm/generate-boom-contract.mjs /absolute/path/to/boomscrolling
 ```
 
 The generator copies only operation schemas/metadata, typed inputs/outputs and the OpenAPI projection. It reads no runtime data, credentials or private drafts. Keep the resulting snapshot aligned with the deployed product before publishing this client.
+
+## Tweet exact text now
+
+For an explicit request such as “use BoomScrolling and tweet this now,” the CLI can publish the exact supplied original text once. It does not publish a queued draft, promote a Like or infer consent from an unattended writer run.
+
+Read the existing connection first. Do not automatically disconnect a working grant to add permission. When the connection lacks publication permission, the user must review that exact additional consent through their normal agent/CLI login flow. A narrowly scoped new connection can request `boom.account.read,boom.publication.write`; `--full` includes the current 17 permissions. Existing logins and refreshes keep their original scopes.
+
+```sh
+node clients/frm/cli.mjs boom get-account-status
+# Only when X write authorization is missing and you explicitly choose to start it:
+node clients/frm/cli.mjs boom connect-x --posting --request-id my-x-write-connection --confirm
+# Complete the returned browser handoff yourself, then inspect status again.
+# Inspect publication.immediate and its exact target.userId/handle.
+node clients/frm/cli.mjs boom post --text 'My exact supplied words.' --account 1234567890123456789 --request-id my-stable-post-key --confirm
+# Or preserve exact UTF-8 file/stdin text:
+node clients/frm/cli.mjs boom post --text-file /absolute/private/path/post.txt --account 1234567890123456789 --request-id another-stable-post-key --confirm
+node clients/frm/cli.mjs boom post --stdin --account 1234567890123456789 --request-id stdin-stable-key --confirm < /absolute/private/path/post.txt
+```
+
+The `connect-x --posting` alias prepares the existing `request_x_connection` operation with `posting:true`; it requires both `boom.account.write` and `boom.publication.write` and never completes the X consent screen itself. Without `--posting`, the connection operation retains its read-only default. Do not replace a working grant automatically.
+
+The account IDs and keys above are fictional examples. Use the connected numeric X user ID shown by current server status, not a handle or a generated persona. Choose one stable request ID for the exact text/account and retain it before sending. Text is preserved, including whitespace and Unicode form. Exactly one of `--text`, `--text-file` or `--stdin` is allowed, together with `--account`, `--request-id` and `--confirm`. Input is original text only, within the service's conservative 280-character guard (ASCII one, other code points two; URLs are not shortened for this guard). Media, quotes, replies and schedules are outside this immediate-original path.
+
+Before sending, the CLI reads `get_account_status` and matches `publication.immediate.target.userId` to `--account`. It requires immediate readiness and makes one `publish_post` call. The server rechecks current account/generation, write permission, budget, concurrency and retained uncertainty at the send fence. A CLI preflight is not an external delivery receipt. There is no browser-posting fallback and no automatic resource retry. Only the publication resource call gets a bounded 60-second client timeout for its create/optional-readback path; ordinary status calls keep the existing 20-second bound.
+
+```sh
+node clients/frm/cli.mjs boom post-status my-stable-post-key
+```
+
+After a timeout, lost response or `preparing`/`submitting`/`uncertain`/`held` result, read that saved key's status. Do not generate another key or blindly repeat a send to find out what happened. Status lookup never resends. An identical request key is protected by the server; changed text or target under that key conflicts rather than replacing the request. Readiness can change after a prior attempt, so use `post-status` for recovery even when a new `post` preflight is blocked.
+
+The CLI prints the complete result as JSON. A matching `confirmed` result with its bound receipt exits zero; `rejected` exits one; unresolved states or an interrupted submission exit two and include the lookup instruction on stderr. A retained pre-send gate error can report `rejected` with `attempted:false`; an outer request not yet settled can report `held` with `attempted:null`. Those records have no frozen text/target and never authorize a resend. The receipt distinguishes `bound-create-response` evidence from `verified-post-readback`. Exact create-response text can establish the first; when X transforms a supplied URL, the server may use one bounded read of that same post to verify the numeric author and expanded text. Neither proves that the post remains visible later. Share only the returned public URL and intended account, not credentials or private status records.
+
+The [fictional publication packet](examples/publish-original.json) shows the lower-level JSON shape. Its account ID is a fixture, not a target to use.
+
+For SDK callers:
+
+```js
+const connection=createOAuthClient('boom'); // Already granted account.read/publication.write.
+const frm=createClient(connection.callTool);
+const result=await frm.boom.postNow({
+  requestId:'your-stable-request-id',
+  text:'The exact words the user explicitly asked to publish.',
+  targetAccountId:'1234567890123456789',
+  confirmed:true,
+});
+// On an interrupted/uncertain result, inspect instead of sending again:
+const retained=await frm.boom.getPublicationRequest({requestId:'your-stable-request-id'});
+```
+
+`postNow` performs account/readiness preflight and checks the response/receipt binding. `publishPost` is the lower-level shared operation for hosts that already performed that explicit preparation; its server-side permission and exact target/idempotency checks still apply. The connected writer skill has the same explicit request branch. Ordinary draft generation, import, review and recurring writing remain separate from publication.

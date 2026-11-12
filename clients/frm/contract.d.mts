@@ -39,22 +39,24 @@ export interface OperationInputs {
  "get_account_links": Record<string, never>;
  "list_agent_connections": Record<string, never>;
  "revoke_agent_connection": { "requestId": string; "confirmed": true; "grantId": string; "expectedClientId": string; "expectedExpiresAt": number; };
- "request_x_connection": { "requestId": string; "confirmed": true; };
+ "request_x_connection": { "requestId": string; "confirmed": true; "posting"?: boolean; };
  "disconnect_x": { "requestId": string; "confirmed": true; "expectedUserId": string; "expectedConnectionVersion": string; };
  "load_following": { "requestId": string; "confirmed": true; };
  "get_drafting_status": Record<string, never>;
  "request_hosted_draft": { "requestId": string; "confirmed": true; "post": { "id": string; "url": string; "text": string; "handle"?: string; "media"?: Array<{ "type": "photo" | "video" | "animated_gif"; "url": string; "alt"?: string; }>; }; "form": "quote" | "reply"; "voice": "straight" | "deadpan" | "promo"; "intent"?: string; "draft"?: string; "approach"?: "own" | "question" | "example" | "disagree" | "shorter"; "hints"?: Array<"concise" | "calm" | "plain">; "reason"?: "" | "opinion" | "voice" | "generic" | "context"; };
  "get_publication_status": Record<string, never>;
  "get_suggested_feed": { "limit"?: number; "cursor"?: string; "query"?: string; };
+ "publish_post": { "requestId": string; "text": string; "targetAccountId": string; "confirmed": true; };
+ "get_publication_request": { "requestId": string; };
  "get_request_status": { "requestId": string; };
 }
 export interface OperationOutputs {
- "get_capabilities": { "schemaVersion": 1; "access": { "mode": "free" | "paid"; "entitled": boolean; }; "operations": { [key: string]: boolean; }; "funding": { "suppliedDraft": "caller_runtime"; "hostedGeneration": false; }; "following": ({ "available": false; "reason": string; } | { "available": boolean; "reason": string | null; "postReadsRemaining": number; "costRemainingMicroUsd": number; "periodEnd": number; }); "publication": { "available": false; "reason": string; }; "delegatedOAuth": boolean; "operationRequestId"?: string; "requestId"?: string; };
- "get_workspace_context": { "revision": number; "sources": Array<{ "id": string; "title": string; "text": string; "truncated": boolean; "url": string; "author": string; "sourceVersion": string; }>; "nextCursor": string | null; "untrustedContent": true; "operationRequestId"?: string; "requestId"?: string; };
- "propose_draft": { "revision": number; "draft": (null | { "id": string; "postId": string; "form": "reply" | "quote"; "text": string; "status": string; }); "duplicate": boolean; "reviewRequired": true; "funding": "caller_runtime"; "operationRequestId"?: string; "requestId"?: string; };
+ "get_capabilities": { "schemaVersion": 1; "access": { "mode": "free" | "paid"; "entitled": boolean; }; "operations": { [key: string]: boolean; }; "funding": { "suppliedDraft": "caller_runtime"; "hostedGeneration": false; }; "following": ({ "available": false; "reason": string; } | { "available": boolean; "reason": string | null; "postReadsRemaining": number; "costRemainingMicroUsd": number; "periodEnd": number; } | { "available": boolean; "reason": string | null; "mode": "owner-lifetime"; "ownerFunding"?: { [key: string]: unknown; }; }); "publication": { "available": boolean; "reason": string | null; "immediate"?: { [key: string]: unknown; }; }; "delegatedOAuth": boolean; "operationRequestId"?: string; "requestId"?: string; "traceRequestId"?: string; };
+ "get_workspace_context": { "revision": number; "sources": Array<{ "id": string; "title": string; "text": string; "truncated": boolean; "url": string; "author": string; "sourceVersion": string; }>; "nextCursor": string | null; "untrustedContent": true; "operationRequestId"?: string; "requestId"?: string; "traceRequestId"?: string; };
+ "propose_draft": { "revision": number; "draft": (null | { "id": string; "postId": string; "form": "reply" | "quote"; "text": string; "status": string; }); "duplicate": boolean; "reviewRequired": true; "funding": "caller_runtime"; "operationRequestId"?: string; "requestId"?: string; "traceRequestId"?: string; };
  "get_writer_context": { [key: string]: unknown; };
- "submit_candidates": { "results": Array<{ "id": string; "status": "created" | "unchanged" | "conflict"; }>; "reviewRequired": true; "funding": "caller_runtime"; "operationRequestId"?: string; "requestId"?: string; };
- "upload_media": { "key": string; "sha256": string; "bytes": number; "reviewRequired": true; "operationRequestId"?: string; "requestId"?: string; };
+ "submit_candidates": { "results": Array<{ "id": string; "status": "created" | "unchanged" | "conflict"; }>; "reviewRequired": true; "funding": "caller_runtime"; "operationRequestId"?: string; "requestId"?: string; "traceRequestId"?: string; };
+ "upload_media": { "key": string; "sha256": string; "bytes": number; "reviewRequired": true; "operationRequestId"?: string; "requestId"?: string; "traceRequestId"?: string; };
  "list_sources": { [key: string]: unknown; };
  "get_source": { [key: string]: unknown; };
  "upsert_source": { [key: string]: unknown; };
@@ -95,6 +97,8 @@ export interface OperationOutputs {
  "request_hosted_draft": { [key: string]: unknown; };
  "get_publication_status": { [key: string]: unknown; };
  "get_suggested_feed": { [key: string]: unknown; };
+ "publish_post": { [key: string]: unknown; };
+ "get_publication_request": { [key: string]: unknown; };
  "get_request_status": { [key: string]: unknown; };
 }
 export type OperationName=keyof OperationInputs;

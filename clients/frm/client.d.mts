@@ -25,7 +25,17 @@ export type OperationMethods={readonly [Method in keyof typeof BOOM_OPERATIONS]:
   {} extends OperationInputs[(typeof BOOM_OPERATIONS)[Method]['name']]
     ? (args?:OperationInputs[(typeof BOOM_OPERATIONS)[Method]['name']])=>Promise<OperationOutputs[(typeof BOOM_OPERATIONS)[Method]['name']]>
     : (args:OperationInputs[(typeof BOOM_OPERATIONS)[Method]['name']])=>Promise<OperationOutputs[(typeof BOOM_OPERATIONS)[Method]['name']]>};
-export type BoomClient=Omit<OperationMethods,'writerContext'|'submitCandidates'|'uploadMedia'|'downloadMedia'> & Readonly<{
+export interface PublishPostArgs {requestId:string;text:string;targetAccountId:string;confirmed:true;}
+export interface VerifiedImmediatePublicationReceipt {requestHash:string;postId:string;url:string;accountId:string;evidence:'bound-create-response'|'verified-post-readback';textVerified:true;readbackStatus?:200;readbackAuthorId?:string;mode?:'original';[key:string]:unknown;}
+export interface UnverifiedImmediatePublicationReceipt {requestHash:string;accountId:string;evidence:'unverified-create-response';textVerified:false;postId?:string;url?:string;returnedText?:string;mode?:'original';[key:string]:unknown;}
+export type ImmediatePublicationReceipt=VerifiedImmediatePublicationReceipt|UnverifiedImmediatePublicationReceipt;
+export interface RetainedPublicationGate {requestId:string;status:'rejected'|'held';attempted:false|null;receipt:null;postId:null;publicationVerified:false;retryAuthorized:false;[key:string]:unknown;}
+export type PublicationLookupResult=ImmediatePublicationRequest|RetainedPublicationGate;
+export interface ImmediatePublicationRequest {requestHash:string;requestId:string;status:'preparing'|'submitting'|'confirmed'|'uncertain'|'rejected';targetAccountId:string;connectionVersion:string;text:string;receipt:ImmediatePublicationReceipt|null;duplicate?:boolean;reason?:string;[key:string]:unknown;}
+export type BoomClient=Omit<OperationMethods,'writerContext'|'submitCandidates'|'uploadMedia'|'downloadMedia'|'publishPost'|'getPublicationRequest'> & Readonly<{
+ postNow(args:PublishPostArgs):Promise<ImmediatePublicationRequest>;
+ publishPost(args:PublishPostArgs):Promise<ImmediatePublicationRequest>;
+ getPublicationRequest(args:{requestId:string}):Promise<PublicationLookupResult>;
  writerContext(args?:{authorHandle?:string;candidateIds?:string[]}):Promise<WriterContext>;
  submitCandidates(args:{candidates:Candidate[]}):Promise<CandidateResult>;
  uploadMedia(args:MediaUpload):Promise<MediaResult>;

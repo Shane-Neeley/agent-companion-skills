@@ -8,10 +8,10 @@ import {join} from 'node:path';
 import {CredentialStore,createOAuthClient} from './oauth.mjs';
 import {createClient} from './client.mjs';
 
-async function fixture(t,{badIssuer=false,redirectToken=false,failedCall=false,failedRevocation=false,product='boom',exportCase}={}) {
+async function fixture(t,{badIssuer=false,redirectToken=false,failedCall=false,failedRevocation=false,product='boom',exportCase,publicationCase}={}) {
   const directory=await mkdtemp(join(tmpdir(),'frm-oauth-fixture-'));
   const store=new CredentialStore(join(directory,'credentials'));
-  const calls=[],registrations=[];let authorization,refresh=0;
+  const calls=[],registrations=[];let authorization,refresh=0,publicationPayload;
   const exportBytes=new TextEncoder().encode('PK\x03\x04fictional archive');
   const snapshot='kit_'+'a'.repeat(64);
   const manifest={snapshot_id:snapshot,revisions:{profile:1,brain:1,work:1},read_only:true,funding:'caller_runtime',content_type:'application/zip',filename:'my-business-starter.zip',bytes:exportBytes.byteLength,sha256:createHash('sha256').update(exportBytes).digest('hex'),download_path:'/agent/kit/workspace/export?snapshot_id='+snapshot,review_status:'owner_reviewed',local_files:'snapshot_only_no_sync'};
@@ -33,6 +33,13 @@ async function fixture(t,{badIssuer=false,redirectToken=false,failedCall=false,f
     }
     if(url.pathname.startsWith('/api/v1/')){
       assert.equal(req.headers.authorization,'Bearer fictional-access-'+refresh);
+      if(publicationCase&&url.pathname==='/api/v1/account/status')return send(200,{publication:{immediate:{ready:true,target:{userId:'123',handle:'fixture',connectionVersion:'generation'}}},requestId:'trace-account-read'});
+      if(publicationCase&&['/api/v1/publication/posts','/api/v1/publication/requests/get'].includes(url.pathname)){
+        if(url.pathname.endsWith('/posts'))publicationPayload=JSON.parse(body);
+        const input=publicationPayload||{requestId:url.searchParams.get('requestId'),text:'Exact original words',targetAccountId:'123'};
+        return send(200,{...input,requestHash:'a'.repeat(64),connectionVersion:'generation',status:'confirmed',receipt:{requestHash:'a'.repeat(64),postId:'789',url:'https://x.com/i/status/789',accountId:input.targetAccountId,evidence:'bound-create-response',textVerified:true},traceRequestId:'11111111-1111-4111-8111-111111111111'});
+      }
+
       return send(failedCall?503:200,{synthetic:true,path:url.pathname,query:Object.fromEntries(url.searchParams),body:body?JSON.parse(body):null});
     }
     if(url.pathname==='/agent/mcp'){
@@ -43,6 +50,11 @@ async function fixture(t,{badIssuer=false,redirectToken=false,failedCall=false,f
         if(rpc.method==='notifications/initialized')return res.writeHead(202).end();
         assert.equal(rpc.params._meta,undefined);
       }else{assert.equal(req.headers['mcp-protocol-version'],'2026-07-28');assert.equal(rpc.params._meta['io.modelcontextprotocol/protocolVersion'],'2026-07-28');}
+      if(publicationCase&&rpc.params.name==='get_account_status')return send(200,{jsonrpc:'2.0',id:rpc.id,result:{structuredContent:{publication:{immediate:{ready:true,target:{userId:publicationCase==='wrong-target'?'456':'123',handle:'fixture',connectionVersion:'generation'}}}}}});
+      if(publicationCase&&['publish_post','get_publication_request'].includes(rpc.params.name)){
+        const input=rpc.params.arguments,status=publicationCase==='uncertain'?'uncertain':'confirmed';
+        return send(200,{jsonrpc:'2.0',id:rpc.id,result:{structuredContent:{requestId:input.requestId,text:input.text||'Exact original words',targetAccountId:input.targetAccountId||'123',connectionVersion:'generation',requestHash:'a'.repeat(64),status,receipt:status==='confirmed'?{requestHash:'a'.repeat(64),postId:'789',url:'https://x.com/i/status/789',accountId:input.targetAccountId||'123',evidence:publicationCase==='readback'?'verified-post-readback':'bound-create-response',textVerified:true,...(publicationCase==='readback'?{readbackStatus:200,readbackAuthorId:input.targetAccountId||'123'}:{})}:null}}});
+      }
       return send(failedCall?503:200,{jsonrpc:'2.0',id:rpc.id,result:{structuredContent:{synthetic:true,name:rpc.params.name}}});
     }
     if(url.pathname==='/agent/kit/workspace/export'){
@@ -211,7 +223,7 @@ test('Kit download rejects changed snapshots, bad type, size, checksum and redir
 
 test('full and explicit logins ask for new scopes only after opt-in and refresh cannot expand them',async t=>{
  const f=await fixture(t);const login=await f.connection.login({full:true,onAuthorization:f.authorize});
- for(const scope of ['boom.drafts.read','boom.settings.read','boom.review.read','boom.drafts.manage','boom.writer.manage','boom.workspace.write','boom.workspace.export','boom.settings.write','boom.review.write','boom.account.read','boom.account.write','boom.provider.use'])assert.ok(login.scopes.includes(scope));
+ for(const scope of ['boom.publication.write','boom.drafts.read','boom.settings.read','boom.review.read','boom.drafts.manage','boom.writer.manage','boom.workspace.write','boom.workspace.export','boom.settings.write','boom.review.write','boom.account.read','boom.account.write','boom.provider.use'])assert.ok(login.scopes.includes(scope));
  const saved=await f.store.read('boom');await f.store.write('boom',{...saved,expiresAt:0});
  await f.connection.callTool('get_account_status');
  assert.deepEqual((await f.store.read('boom')).scopes,login.scopes);
@@ -251,6 +263,52 @@ test('existing writer-default grants do not gain authority to edit or retire ear
  const f=await fixture(t);const login=await f.connection.login({onAuthorization:f.authorize});
  assert.deepEqual(login.scopes,['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write']);
  const before=f.calls.length;
- for(const name of ['list_drafts','get_draft','get_preferences','get_feedback','edit_draft','cancel_draft','edit_candidate','retire_candidate','record_authored_post'])await assert.rejects(f.connection.callTool(name,{}),/granted scopes/);
+ for(const name of ['publish_post','get_publication_request','list_drafts','get_draft','get_preferences','get_feedback','edit_draft','cancel_draft','edit_candidate','retire_candidate','record_authored_post'])await assert.rejects(f.connection.callTool(name,{}),/granted scopes/);
  assert.equal(f.calls.length,before);
+});
+
+import {spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+async function spawnedCLI(args) {
+ const child=spawn(process.execPath,[fileURLToPath(new URL('./cli.mjs',import.meta.url)),...args],{stdio:['ignore','pipe','pipe']});
+ let stdout='',stderr='';child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');child.stdout.on('data',value=>stdout+=value);child.stderr.on('data',value=>stderr+=value);
+ return new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',status=>resolve({status,stdout,stderr}));});
+}
+test('spawned post CLI uses the actual OAuth client once and fails closed for uncertainty, target and scope',async t=>{
+ for(const publicationCase of ['confirmed','readback','uncertain','wrong-target','missing-scope'])await t.test(publicationCase,async t=>{
+  const f=await fixture(t,{publicationCase});await f.connection.login({scopes:publicationCase==='missing-scope'?['boom.account.read']:['boom.account.read','boom.publication.write'],onAuthorization:f.authorize});
+  const adapter=join(f.directory,'authorized-client.mjs');
+  await writeFile(adapter,`import {createOAuthClient,CredentialStore} from ${JSON.stringify(new URL('./oauth.mjs',import.meta.url).href)};const client=createOAuthClient('boom',{origin:${JSON.stringify(f.origin)},store:new CredentialStore(${JSON.stringify(f.store.directory)})});export const callTool=client.callTool;`);
+  const result=await spawnedCLI(['--transport',adapter,'boom','post','--text','Exact original words','--account','123','--request-id','actual-cli-fixture','--confirm']);
+  const calls=f.calls.filter(call=>call.path==='/agent/mcp').map(call=>JSON.parse(call.body));
+  if(['confirmed','readback'].includes(publicationCase)){assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(result.stdout).receipt.url,'https://x.com/i/status/789');}
+  if(publicationCase==='uncertain'){assert.equal(result.status,2,result.stderr);assert.equal(JSON.parse(result.stdout).status,'uncertain');assert.match(result.stderr,/post-status actual-cli-fixture/);}
+  if(['wrong-target','missing-scope'].includes(publicationCase)){assert.equal(result.status,1);assert.equal(result.stdout,'');assert.match(result.stderr,/did not submit/);}
+  assert.equal(calls.filter(call=>call.params.name==='publish_post').length,['confirmed','readback','uncertain'].includes(publicationCase)?1:0);
+  assert.equal(calls.filter(call=>call.params.name==='get_account_status').length,1);
+  if(publicationCase==='uncertain'){
+   const before=calls.length,lookup=await spawnedCLI(['--transport',adapter,'boom','post-status','actual-cli-fixture']);assert.equal(lookup.status,2);assert.equal(JSON.parse(lookup.stdout).status,'uncertain');
+   const retained=f.calls.filter(call=>call.path==='/agent/mcp').map(call=>JSON.parse(call.body));assert.equal(retained.length,before+1);assert.equal(retained.at(-1).params.name,'get_publication_request');assert.equal(retained.filter(call=>call.params.name==='publish_post').length,1);
+  }
+ });
+});
+test('publication gets a bounded extended timeout; status calls retain their original bound',async t=>{
+ const f=await fixture(t,{publicationCase:'confirmed'});await f.connection.login({scopes:['boom.account.read','boom.publication.write'],onAuthorization:f.authorize});
+ const timeouts=[],original=AbortSignal.timeout;t.mock.method(AbortSignal,'timeout',milliseconds=>{timeouts.push(milliseconds);return original(milliseconds);});
+ await f.connection.callTool('publish_post',{requestId:'timeout-fixture',text:'Exact original words',targetAccountId:'123',confirmed:true});
+ await f.connection.callTool('get_publication_request',{requestId:'timeout-fixture'});
+ assert.deepEqual(timeouts,[60000,20000]);
+});
+test('starting an X write-authorization flow requires the distinct publication scope before network',async t=>{
+ const f=await fixture(t);await f.connection.login({scopes:['boom.account.write'],onAuthorization:f.authorize});const before=f.calls.length;
+ for(const call of [()=>f.connection.callTool('request_x_connection',{requestId:'write-connect',confirmed:true,posting:true}),()=>f.connection.requestOperation('request_x_connection',{requestId:'write-connect',confirmed:true,posting:true})])await assert.rejects(call(),error=>error.code==='SCOPE_REQUIRED'&&error.requiredScope==='boom.publication.write');
+ assert.equal(f.calls.length,before);
+ await f.connection.callTool('request_x_connection',{requestId:'read-connect',confirmed:true});assert.equal(f.calls.filter(call=>call.path==='/agent/mcp').length,1);
+});
+test('spawned REST post and status keep the stable publication key separate from the trace ID',async t=>{
+ const f=await fixture(t,{publicationCase:'confirmed'});await f.connection.login({scopes:['boom.account.read','boom.publication.write'],onAuthorization:f.authorize});
+ const adapter=join(f.directory,'authorized-rest.mjs');await writeFile(adapter,`import {createOAuthClient,CredentialStore} from ${JSON.stringify(new URL('./oauth.mjs',import.meta.url).href)};const client=createOAuthClient('boom',{origin:${JSON.stringify(f.origin)},store:new CredentialStore(${JSON.stringify(f.store.directory)})});export const requestOperation=client.requestOperation;`);
+ const sent=await spawnedCLI(['--rest','--transport',adapter,'boom','post','--text','Exact original words','--account','123','--request-id','stable-rest-key','--confirm']);assert.equal(sent.status,0,sent.stderr);const record=JSON.parse(sent.stdout);assert.equal(record.requestId,'stable-rest-key');assert.equal(record.traceRequestId,'11111111-1111-4111-8111-111111111111');
+ const lookup=await spawnedCLI(['--rest','--transport',adapter,'boom','post-status','stable-rest-key']);assert.equal(lookup.status,0,lookup.stderr);assert.equal(JSON.parse(lookup.stdout).requestId,'stable-rest-key');
+ assert.equal(f.calls.filter(call=>call.path==='/api/v1/publication/posts').length,1);assert.equal(f.calls.filter(call=>call.path==='/api/v1/publication/requests/get').length,1);assert.equal(f.calls.filter(call=>call.path==='/agent/mcp').length,0);
 });

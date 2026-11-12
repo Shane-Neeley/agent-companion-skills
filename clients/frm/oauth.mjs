@@ -8,7 +8,7 @@ import {homedir} from 'node:os';
 import {join, resolve} from 'node:path';
 
 export const PRODUCTS=Object.freeze({
-  boom:Object.freeze({origin:'https://boomscrolling.fortrockmedia.com',scopes:['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write'],optionalScopes:['boom.drafts.read','boom.settings.read','boom.review.read','boom.drafts.manage','boom.writer.manage','boom.workspace.write','boom.workspace.export','boom.settings.write','boom.review.write','boom.account.read','boom.account.write','boom.provider.use']}),
+  boom:Object.freeze({origin:'https://boomscrolling.fortrockmedia.com',scopes:['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write'],optionalScopes:['boom.publication.write','boom.drafts.read','boom.settings.read','boom.review.read','boom.drafts.manage','boom.writer.manage','boom.workspace.write','boom.workspace.export','boom.settings.write','boom.review.write','boom.account.read','boom.account.write','boom.provider.use']}),
   kit:Object.freeze({origin:'https://fortrockmedia.com',scopes:['kit.workspace.read','kit.workspace.export']}),
 });
 const VERSION='2026-07-28';
@@ -29,9 +29,9 @@ function endpoint(value,origin,path) {
   if(value!==origin+path)fail('Unexpected OAuth endpoint; refusing to send credentials.');
   return value;
 }
-async function request(url,options={}) {
+async function request(url,{timeoutMs=20_000,...options}={}) {
   // Never forward credentials across redirects. All network waits are bounded.
-  return fetch(url,{...options,redirect:'error',signal:AbortSignal.timeout(20_000)});
+  return fetch(url,{...options,redirect:'error',signal:AbortSignal.timeout(timeoutMs)});
 }
 async function discover(origin) {
   const resource=origin+'/agent/mcp';
@@ -151,14 +151,17 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
     });
   }
   async function authorized(scope,operation) {
+    const requiredScopes=Array.isArray(scope)?scope:scope?[scope]:[];
     return store.locked(product,async()=>{
       let value=credential(await store.read(product));
-      if(scope&&!value.scopes.includes(scope))fail('Operation is unavailable for this connection or granted scopes.');
+      const missing=requiredScopes.find(scope=>!value.scopes.includes(scope));
+      if(missing)throw Object.assign(new Error('Operation is unavailable for this connection or granted scopes.'),{code:'SCOPE_REQUIRED',requiredScope:missing,resourceRequestSent:false});
       if(value.expiresAt<=Date.now()+30_000){
         const metadata=await discover(origin);
         const tokens=validateToken(await form(metadata.token,{grant_type:'refresh_token',refresh_token:value.refreshToken,client_id:value.clientId,resource},'Token refresh'),value.scopes);
         value={...value,...tokens};await store.write(product,value);
-        if(scope&&!value.scopes.includes(scope))fail('The refreshed connection lacks the required scope. Reconnect to update permissions.');
+        const missing=requiredScopes.find(scope=>!value.scopes.includes(scope));
+        if(missing)throw Object.assign(new Error('The refreshed connection lacks the required scope. Reconnect to update permissions.'),{code:'SCOPE_REQUIRED',requiredScope:missing,resourceRequestSent:false});
       }
       return operation(value);
     });
@@ -196,7 +199,7 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
     return authorized(scope,async value=>{
       const clientInfo={name:'fort-rock-media-client',version:'1.0.0'};
       const headers={'Content-Type':'application/json',Accept:'application/json, text/event-stream',Authorization:'Bearer '+value.accessToken,'MCP-Protocol-Version':protocolVersion};
-      const post=(method,params,notification=false)=>request(resource,{method:'POST',headers:{...headers,...(protocolVersion===VERSION?{'Mcp-Method':method,...(params.name?{'Mcp-Name':params.name}:{})}:{})},body:JSON.stringify({jsonrpc:'2.0',...(notification?{}:{id:1}),method,params})});
+      const post=(method,params,notification=false)=>request(resource,{timeoutMs:method==='tools/call'&&params.name==='publish_post'?60_000:20_000,method:'POST',headers:{...headers,...(protocolVersion===VERSION?{'Mcp-Method':method,...(params.name?{'Mcp-Name':params.name}:{})}:{})},body:JSON.stringify({jsonrpc:'2.0',...(notification?{}:{id:1}),method,params})});
       if(protocolVersion==='2025-11-25'){
         // Explicit compatibility mode; no fallback/replay after a resource call.
         const initialized=await json(await post('initialize',{protocolVersion,capabilities:{},clientInfo}),'MCP initialization');
@@ -217,21 +220,21 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
   async function callTool(name,args={}) {
     const scopes=product==='boom'?BOOM_OPERATION_SCOPES:{kit_get_capabilities:'kit.workspace.read',kit_get_workspace_context:'kit.workspace.read',kit_get_export_manifest:'kit.workspace.export'};
     const scope=scopes[name];if(!scope)fail('Tool is unavailable for this product.');
-    return resourceCall('tools/call',{name,arguments:args},scope);
+    return resourceCall('tools/call',{name,arguments:args},name==='request_x_connection'&&args.posting===true?[scope,'boom.publication.write']:scope);
   }
   async function requestOperation(name,args={}) {
     if(product!=='boom')fail('Direct product REST is only available for BoomScrolling.');
     const operation=Object.values(BOOM_OPERATIONS).find(operation=>operation.name===name);
     if(!operation)fail('Operation is unavailable for this product.');
     if(!args||typeof args!=='object'||Array.isArray(args))fail('Use an operation argument object.');
-    return authorized(operation.scope,async value=>{
+    return authorized(name==='request_x_connection'&&args.posting===true?[operation.scope,'boom.publication.write']:operation.scope,async value=>{
       const {method,path}=operation.http;
       if(!['GET','POST'].includes(method)||!path.startsWith('/api/v1/')||path.includes('..')||path.includes('?')||path.includes('#'))fail('Invalid product REST operation.');
       const url=new URL(path,origin);
       if(method==='GET')for(const [key,input] of Object.entries(args)){
         if(input!==undefined)url.searchParams.set(key,Array.isArray(input)?input.join(','):String(input));
       }
-      const response=await request(url,{method,headers:{Authorization:'Bearer '+value.accessToken,Accept:'application/json',...(method==='POST'?{'Content-Type':'application/json'}:{})},...(method==='POST'?{body:JSON.stringify(args)}:{})});
+      const response=await request(url,{timeoutMs:name==='publish_post'?60_000:20_000,method,headers:{Authorization:'Bearer '+value.accessToken,Accept:'application/json',...(method==='POST'?{'Content-Type':'application/json'}:{})},...(method==='POST'?{body:JSON.stringify(args)}:{})});
       let result;try{result=await response.json();}catch{fail('REST operation returned invalid JSON.');}
       if(!response.ok){const error=new Error(result?.error||`REST operation failed (HTTP ${response.status}).`);error.status=response.status;error.code=result?.code;error.requestId=result?.requestId;throw error;}
       return result;

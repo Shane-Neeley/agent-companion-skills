@@ -2,7 +2,7 @@
 
 Your existing agent writes. Your private BoomScrolling feed holds the results and your feedback. Review on your phone at [BoomScrolling](https://boomscrolling.fortrockmedia.com/studio/app/), using the same ChatGPT account you connected from your agent.
 
-This plugin supplies one writing workflow and an authenticated remote MCP connection. The agent keeps its existing model access, local tools, permissions and costs. Website sign-in owns your stored account; it does not transfer a model subscription or expose your computer to the website. Uploads contain only the drafts and permitted media you select. Submission does not approve or publish a post.
+This plugin supplies one writing workflow and an authenticated remote MCP connection. The agent keeps its existing model access, local tools, permissions and costs. Website sign-in owns your stored account; it does not transfer a model subscription or expose your computer to the website. Uploads contain only the drafts and permitted media you select. Submission does not approve or publish a post. A separate explicit “tweet this now” workflow can publish exact supplied original text with its own publication permission and verified account/readiness.
 
 Requires a BoomScrolling account with current agent-writer access. The existing owner account is the first dogfood pilot. Paid sales and broader hosted availability are separate release decisions; installation alone grants no entitlement.
 
@@ -58,6 +58,18 @@ In ChatGPT web, go to Plugins, choose Add custom MCP server and supply the custo
 OpenCode V2 configuration is provided in [the client examples](https://github.com/Shane-Neeley/agent-companion-skills/blob/main/clients/frm/examples/opencode.json). Merge the server into the chosen project's configuration, then run `opencode mcp auth boomscrolling`. Earlier OpenCode versions have a different configuration shape; use their installed help rather than copying a V2 config into V1.
 
 Any host supporting remote MCP, OAuth code flow with PKCE and dynamic registration can connect to `https://boomscrolling.fortrockmedia.com/agent/mcp`. The [SDK and CLI](https://github.com/Shane-Neeley/agent-companion-skills/tree/main/clients/frm) are available for your own tool runner. Credentials stay with the host or in the CLI's protected local store.
+
+## Tweet exact supplied text now
+
+After connecting with publication permission, ask:
+
+> Use BoomScrolling and tweet this now on my selected account: [exact words].
+
+The agent resolves the connected numeric X account, checks immediate readiness, saves a stable request ID and sends the supplied original text once. It does not turn a draft drop, Like or recurring writer run into posting consent. Missing permissions, funding or X write access remain precise blockers; there is no browser-posting fallback. A previous exact authorization is not followed by a routine second approval question.
+
+For the standalone CLI, see [explicit immediate posting](../../clients/frm/README.md#tweet-exact-text-now). Publication uses the optional `boom.publication.write` scope; CLI account preflight also needs `boom.account.read`. Existing default writer grants and refreshes never gain that permission. Do not disconnect a working grant automatically to add it.
+
+A confirmed result includes a URL and a receipt that distinguishes bound create-response evidence from a verified post readback. An unknown or uncertain attempt is inspected by its saved request ID, never resent automatically. No media, reply, quote or scheduled posting is part of this immediate-original path. Current server gates still determine availability.
 
 ## Verify and disconnect
 

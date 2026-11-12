@@ -507,6 +507,28 @@ const entries=[
     }
   ],
   [
+    "publishPost",
+    {
+      "name": "publish_post",
+      "scope": "boom.publication.write",
+      "http": {
+        "method": "POST",
+        "path": "/api/v1/publication/posts"
+      }
+    }
+  ],
+  [
+    "getPublicationRequest",
+    {
+      "name": "get_publication_request",
+      "scope": "boom.publication.write",
+      "http": {
+        "method": "GET",
+        "path": "/api/v1/publication/requests/get"
+      }
+    }
+  ],
+  [
     "getRequestStatus",
     {
       "name": "get_request_status",

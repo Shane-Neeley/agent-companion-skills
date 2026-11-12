@@ -6,7 +6,7 @@ Your agent already has tools, notes and a way of working. These companions give 
 
 | What you want | Start here |
 | --- | --- |
-| Have your agent write into your private BoomScrolling feed | [Writer plugin and setup for your agent](plugins/boomscrolling-writer/README.md) |
+| Have your agent write into your private BoomScrolling feed, or explicitly tweet supplied text now | [Writer plugin and setup for your agent](plugins/boomscrolling-writer/README.md) |
 | Connect from a script or terminal | [Client and CLI quick start](clients/frm/README.md#try-it-without-an-account) |
 | Try a small local job with no account connection | Choose one of the two free skills below |
 
@@ -25,7 +25,7 @@ View the verified skills.sh detail pages: [Check your first agent job](https://s
 
 The separate [open-source agent client and CLI](clients/frm/README.md) connect your product account from Claude or your own agent using customer OAuth. They are optional developer tools, not part of either local skill.
 
-The [BoomScrolling Writer plugin](plugins/boomscrolling-writer/README.md) connects an existing Codex, Claude, ChatGPT or other MCP agent to its private generated feed. It uses the host's existing reasoning and tools, reads writing feedback and sends supplied drafts for review. Account access is required; it never approves or publishes. The two disconnected skills above remain usable on their own.
+The [BoomScrolling Writer plugin](plugins/boomscrolling-writer/README.md) connects an existing Codex, Claude, ChatGPT or other MCP agent to its private generated feed. It uses the host's existing reasoning and tools, reads writing feedback and sends supplied drafts for review. Account access is required. Draft delivery stays unapproved; a separate explicit “tweet this now” request can publish exact supplied original text when its publication permission, numeric target and server readiness are verified. The two disconnected skills above remain usable on their own.
 
 In Claude Code, install from the publisher's repository marketplace:
 

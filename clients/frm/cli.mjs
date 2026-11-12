@@ -8,14 +8,19 @@ import {createOAuthClient,PRODUCTS} from './oauth.mjs';
 import {BOOM_COMMANDS,BOOM_OPERATIONS} from './operations.mjs';
 import {BOOM_TAGLINE,boomMasthead,terminalBrand} from './terminal.mjs';
 import {composeLink,shareLink,profileLink,writingContext,takeCard} from './helpers.mjs';
-const args=process.argv.slice(2);
-const jsonOnly=args.includes('--json');
-if(jsonOnly)args.splice(args.indexOf('--json'),1);
-const useRest=args.includes('--rest');
-if(useRest)args.splice(args.indexOf('--rest'),1);
-let output;
-const outputIndex=args.indexOf('--output');
-if(outputIndex!==-1){output=args[outputIndex+1];if(!output||args.indexOf('--output',outputIndex+1)!==-1)throw Error('Supply exactly one file path after --output.');args.splice(outputIndex,2);}
+import {parsePostArguments,postStatusArguments,validatePostArguments,publicationExit,connectXArguments} from './post.mjs';
+const rawArgs=process.argv.slice(2),args=[];
+let jsonOnly=false,useRest=false,output;
+// Post text is a literal argument, even when it happens to equal a global flag.
+const valueFlags=new Set(['--text','--text-file','--account','--request-id','--scopes','--transport']);
+for(let index=0;index<rawArgs.length;index++) {
+ const flag=rawArgs[index];
+ if(valueFlags.has(flag)){args.push(flag);if(index+1<rawArgs.length)args.push(rawArgs[++index]);continue;}
+ if(flag==='--json'){if(jsonOnly)throw Error('Do not repeat --json.');jsonOnly=true;continue;}
+ if(flag==='--rest'){if(useRest)throw Error('Do not repeat --rest.');useRest=true;continue;}
+ if(flag==='--output'){if(output!==undefined||index+1>=rawArgs.length)throw Error('Supply exactly one file path after --output.');output=rawArgs[++index];continue;}
+ args.push(flag);
+}
 const maxPayload=8*1024*1024,maxExport=16*1024*1024;
 const help=`FRM agent client · BoomScrolling
 
@@ -47,6 +52,13 @@ Commands:
   boom download-media JSON --output FILE  Verify and save the complete private image
   boom export-workspace JSON --output FILE  Save all pages of a scoped workspace export
   boom export-writer-data JSON --output FILE Save all pages of a private writer export
+  boom post --text TEXT --account ID --request-id KEY --confirm
+                                   Publish one exact user-directed original post now
+  boom post --text-file FILE|--stdin --account ID --request-id KEY --confirm
+                                   Preserve exact text from a UTF-8 file or stdin
+  boom post-status KEY             Read the retained outcome; never resends
+  boom connect-x --posting --request-id KEY --confirm
+                                   Prepare explicit X write-authorization handoff
   boom compose JSON                Build an X review link; never sends
   boom share JSON                  Return the original source link
   boom profile JSON                Open/follow handoff URL for an exact X handle
@@ -65,7 +77,9 @@ NO_COLOR disables terminal color. Help always includes the BoomScrolling line.
 Keep the terminal open during login; its browser must be on this computer.
 New scopes require a fresh, explicitly reviewed connection; refresh cannot add them.
 Review writes, hosted assistance and X reads require their own permissions and gates.
-No command approves or publishes. Opening the X composer does not send a post.
+Only an explicit confirmed post command can publish, with separate publication permission.
+Draft import, Like and unattended writing never publish. Composer links do not send.
+After an uncertain result, use post-status with the same key; never create a blind retry.
 Setup: https://github.com/Shane-Neeley/agent-companion-skills/tree/main/clients/frm
 `;
 async function readPayload(value,operation) {
@@ -180,18 +194,34 @@ async function main(){
   else console.log(JSON.stringify(result,null,2));
   return;
  }
+ if(product==='boom'&&['post','post-status'].includes(operation)&&commands.length===3&&['--help','-h'].includes(commands[2])) {
+  if(output)throw Error('--output is not available for posting help.');
+  const usage=operation==='post'?'boom post --text TEXT|--text-file FILE|--stdin --account NUMERIC_X_ID --request-id STABLE_KEY --confirm':'boom post-status STABLE_REQUEST_ID';
+  console.log(jsonOnly?JSON.stringify({usage,scope:'boom.publication.write',preflightScope:operation==='post'?'boom.account.read':null,retries:false},null,2):usage+'\n\nExplicit immediate originals only. A status lookup never resends.');return;
+ }
+ let directPost=false,statusLookup=false,directConnect=false;
+ if(product==='boom'&&operation==='post') {
+  if(output)throw Error('--output is not available for a live post.');
+  payload=await parsePostArguments(commands.slice(2));operation='publishPost';directPost=true;
+ }else if(product==='boom'&&operation==='connect-x') {
+  if(output)throw Error('--output is not available for connection setup.');
+  payload=connectXArguments(commands.slice(2));operation='requestXConnection';directConnect=true;
+ }else if(product==='boom'&&operation==='post-status') {
+  if(output)throw Error('--output is not available for post-status.');
+  payload=postStatusArguments(commands.slice(2));operation='getPublicationRequest';statusLookup=true;
+ }
  let genericName;
  if(operation==='call'&&product==='boom') {
   if(commands.length<3||commands.length>4)throw Error('Use boom call OPERATION [JSON|@FILE|-].');
   genericName=commands[2];payload=commands[3];
- }else if(commands.length>3)throw Error('Too many arguments.');
+ }else if(!directPost&&!statusLookup&&!directConnect&&commands.length>3)throw Error('Too many arguments.');
  if(args[0]!=='--transport'){connection=createOAuthClient(product);callTool=connection.callTool;listTools=connection.listTools;requestOperation=connection.requestOperation;}
  if(useRest){if(typeof requestOperation!=='function')throw Error('This trusted adapter has no product REST transport.');callTool=async(name,input)=>({structuredContent:await requestOperation(name,input)});}
  const client=createClient(callTool,{listTools,requestOperation});
  operation=BOOM_COMMANDS[operation]||operation;
  const method=genericName?(input=>client.boom.call(genericName,input)):client[product][operation];
  if(typeof method!=='function'||['call','readMedia'].includes(operation)&&!genericName)throw Error('Operation unavailable for this product; run boom commands or --help.');
- const input=await readPayload(payload,operation);
+ const input=directPost||statusLookup||directConnect?payload:await readPayload(payload,operation);
  let result;
  if(output){
   if(product==='boom'&&operation==='downloadMedia'){
@@ -199,10 +229,14 @@ async function main(){
    const media=await client.boom.readMedia(input);result=await save(media.bytes,output,media.contentType);
   }else if(product==='boom'&&['exportWorkspace','exportWriterData'].includes(operation))result=await save(await exportFile(method,input,BOOM_OPERATIONS[operation].name),output,'application/json');
   else throw Error('--output is available for download-media, exports and take-card.');
+ }else if(product==='boom'&&(operation==='publishPost'||genericName==='publish_post')) {
+  const exact=validatePostArguments(input);
+  try{result=await client.boom.postNow(exact);}catch(error){console.error(error.publicationAttempted===false?'This command did not submit the post.':'No automatic resend was attempted. Inspect boom post-status '+exact.requestId+' before choosing recovery.');throw error;}
  }else result=await method(input);
  console.log(JSON.stringify(result,null,2));
+ if(product==='boom'&&(['publishPost','getPublicationRequest'].includes(operation)||['publish_post','get_publication_request'].includes(genericName))){const state=publicationExit(result);if(state.message)console.error(state.message);process.exitCode=state.code;}
  if(operation==='submitCandidates'&&result?.results?.some(item=>item.status==='conflict')) {
   console.error('Some candidate IDs conflict. Inspect every result and read back the exact IDs before recovery.');process.exitCode=1;
  }
 }
-main().catch(error=>{console.error(error.message);process.exitCode=1;});
+main().catch(error=>{console.error(error.message);process.exitCode=error.publicationAttempted===true?2:1;});

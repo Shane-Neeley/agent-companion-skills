@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "boomscrolling-writer",
-  "version": "0.1.0",
-  "description": "Use your existing agent to write drafts into your private BoomScrolling feed and learn from your edits.",
+  "version": "0.2.0",
+  "description": "Write into your private feed or publish exact original text on an explicit immediate request.",
   "author": {
     "name": "Fort Rock Media",
     "url": "https://fortrockmedia.com"
@@ -21,13 +21,14 @@
       "interface": {
         "displayName": "BoomScrolling Writer",
         "shortDescription": "Your agent, your writing feed",
-        "longDescription": "Use the agent and tools you already have to prepare originals, replies and quotes for your private BoomScrolling feed. Read your saved writing preferences and exact edits, supply drafts and permitted images, and review them on your phone. Your agent supplies the reasoning; BoomScrolling stores your account-owned feed. Submission never approves or publishes a post. Requires account access and an authenticated connection.",
+        "longDescription": "Use the agent and tools you already have to prepare originals, replies and quotes for your private BoomScrolling feed. Read your saved writing preferences and exact edits, supply drafts and permitted images, and review them on your phone. Your agent supplies the reasoning; BoomScrolling stores your account-owned feed. Submission never approves or publishes a post. Requires account access and an authenticated connection. Explicit immediate requests can publish exact original text only with separate publication permission, verified numeric account and current readiness. Unattended writing stays draft-only; uncertain sends are inspected without retry.",
         "developerName": "Fort Rock Media",
         "category": "Productivity",
         "capabilities": [
           "Read writing feedback",
           "Save private drafts",
-          "Upload private images"
+          "Upload private images",
+          "Publish explicitly requested original text"
         ],
         "websiteURL": "https://fortrockmedia.com/boomscrolling/",
         "supportURL": "https://fortrockmedia.com/contact/",
@@ -75,6 +76,12 @@
               "prompt": "Check whether the exact candidate IDs in my saved packet arrived before attempting any recovery.",
               "tools_triggered": "get_writer_context",
               "expected_behavior": "Read the requested IDs and compare exact text/source/media; retry only confirmed missing unchanged packet contents and never overwrite an edited candidate."
+            },
+            {
+              "description": "Explicit immediate original post",
+              "prompt": "Use BoomScrolling to tweet these exact words now on my selected account: The repair manual needs a repair manual.",
+              "tools_triggered": "get_account_status, publish_post",
+              "expected_behavior": "Resolve the exact connected numeric target and readiness, preserve supplied text and stable request ID, send once only under explicit task authority and publication permission, and inspect the bound receipt or unresolved status without a send retry."
             }
           ],
           "negative": [
@@ -96,7 +103,7 @@
         "commerce_description": "The plugin does not sell products or process payments. The service checks current account access."
       },
       "publication": {
-        "release_notes": "Initial writer integration: caller-supplied drafts and private media, account-scoped feedback and exact delivery readback."
+        "release_notes": "Adds explicit user-directed immediate original-text posting with a separate publication scope, numeric-target binding and retained uncertain-attempt status. Draft delivery and unattended writing remain unapproved."
       }
     }
   }

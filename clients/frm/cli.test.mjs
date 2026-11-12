@@ -13,7 +13,7 @@ test('help and an empty command explain the writer path without touching credent
   assert.equal(result.status,0,result.stderr);
   assert.match(result.stdout,/fictional offline writer loop/);
   assert.match(result.stdout,/submit-candidates @FILE/);
-  assert.match(result.stdout,/No command approves or publishes/);
+  assert.match(result.stdout,/Only an explicit confirmed post command can publish/);
   assert.match(result.stdout,/your doomscrolling time isn’t valuable\. your boomscrolling time is\./);
   assert.ok(!result.stdout.includes('\u001b['));
   assert.equal(result.stderr,'');
@@ -60,6 +60,7 @@ test('every shared operation maps to an exact CLI alias and generic calls preser
  const directory=await mkdtemp(join(tmpdir(),'frm-cli-mapping-'));t.after(()=>rm(directory,{recursive:true,force:true}));
  const adapter=join(directory,'trusted-adapter.mjs');await writeFile(adapter,'export async function callTool(name,args){return {structuredContent:{name,args}};} export async function listTools(){return {tools:[{name:"get_source"}]};}');
  for(const [command,method] of Object.entries(BOOM_COMMANDS)){
+  if(['publishPost','getPublicationRequest'].includes(method))continue; // Receipt-aware posting commands are exercised below.
   const result=spawnSync(process.execPath,[cli,'--transport',adapter,'boom',command,'{"fixture":true}'],{encoding:'utf8'});assert.equal(result.status,0,result.stderr);assert.equal(result.stderr,'');assert.deepEqual(JSON.parse(result.stdout),{name:BOOM_OPERATIONS[method].name,args:{fixture:true}});
  }
  const generic=spawnSync(process.execPath,[cli,'--json','--transport',adapter,'boom','call','get_source','{"sourceId":"exact"}'],{encoding:'utf8'});assert.deepEqual(JSON.parse(generic.stdout),{name:'get_source',args:{sourceId:'exact'}});assert.equal(generic.stderr,'');
@@ -93,4 +94,25 @@ test('JSON help and local writing/card helpers work without account access',asyn
  const help=spawnSync(process.execPath,[cli,'--json','--help'],{encoding:'utf8'});assert.equal(JSON.parse(help.stdout).tagline,'your doomscrolling time isn’t valuable. your boomscrolling time is.');assert.equal(help.stderr,'');
  const link=spawnSync(process.execPath,[cli,'boom','compose','{"form":"reply","sourceUrl":"https://x.com/fixture/status/123","text":"Exact words"}'],{encoding:'utf8',env:{...process.env,FRM_CONFIG_DIR:'/a/nonexistent/local-help-must-not-write'}});assert.equal(link.status,0,link.stderr);assert.equal(JSON.parse(link.stdout).sends,false);
  const card=join(directory,'card.svg'),image=spawnSync(process.execPath,[cli,'boom','take-card','{"text":"My own words","author":"Fixture"}','--output',card],{encoding:'utf8'});assert.equal(image.status,0,image.stderr);assert.match(await readFile(card,'utf8'),/My own words/);
+});
+
+test('explicit post flags bind the connected numeric account and never infer a send from draft text',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'frm-cli-post-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const adapter=join(directory,'trusted-adapter.mjs'),calls=join(directory,'calls.jsonl');
+ await writeFile(adapter,`import {appendFile} from 'node:fs/promises';export async function callTool(name,args){await appendFile(${JSON.stringify(calls)},JSON.stringify({name,args})+'\\n');if(name==='get_account_status')return {structuredContent:{publication:{immediate:{ready:true,target:{userId:'123'}}}}};return {structuredContent:{requestId:args.requestId,text:args.text,targetAccountId:args.targetAccountId,connectionVersion:'generation',requestHash:'a'.repeat(64),status:'confirmed',receipt:{requestHash:'a'.repeat(64),postId:'456',url:'https://x.com/i/status/456',accountId:args.targetAccountId,textVerified:true,evidence:'bound-create-response'}}};}`);
+ const run=(tokens,input)=>spawnSync(process.execPath,[cli,'--transport',adapter,'boom',...tokens],{encoding:'utf8',input});
+ for(const [index,text] of ['Exact words\nSecond line.','--json','--rest','--output'].entries()){
+  const result=run(['post','--text',text,'--account','123','--request-id','stable-post-'+index,'--confirm']);assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(result.stdout).text,text);assert.equal(result.stderr,'');
+ }
+ const sent=(await readFile(calls,'utf8')).trim().split('\n').map(line=>JSON.parse(line));assert.deepEqual(sent.map(call=>call.name),['get_account_status','publish_post','get_account_status','publish_post','get_account_status','publish_post','get_account_status','publish_post']);
+ const before=sent.length;
+ for(const tokens of [['post','--text','Words','--account','123','--request-id','missing-confirm'],['post','--text','Words','--account','@fixture','--request-id','bad-account','--confirm']]){const failed=run(tokens);assert.notEqual(failed.status,0);assert.equal(failed.stdout,'');}
+ assert.equal((await readFile(calls,'utf8')).trim().split('\n').length,before);
+});
+test('post-status reads an uncertain attempt without sending and reports a nonzero unresolved state',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'frm-cli-post-status-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const adapter=join(directory,'trusted-adapter.mjs'),calls=join(directory,'calls.jsonl');
+ await writeFile(adapter,`import {appendFile} from 'node:fs/promises';export async function callTool(name,args){await appendFile(${JSON.stringify(calls)},JSON.stringify({name,args})+'\\n');return {structuredContent:{requestId:args.requestId,status:'uncertain',targetAccountId:'123',text:'Exact supplied words',receipt:null}};}`);
+ const child=spawnSync(process.execPath,[cli,'--transport',adapter,'boom','post-status','stable-post'],{encoding:'utf8'});assert.equal(child.status,2);assert.equal(JSON.parse(child.stdout).status,'uncertain');assert.match(child.stderr,/do not submit a new send/);
+ const sent=(await readFile(calls,'utf8')).trim().split('\n').map(line=>JSON.parse(line));assert.deepEqual(sent,[{name:'get_publication_request',args:{requestId:'stable-post'}}]);
 });

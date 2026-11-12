@@ -58,3 +58,47 @@ test('media rejects bad sizes, swapped images, invalid base64 and continuation l
   await assert.rejects(client.boom.readMedia({key:'fixture'}));assert.equal(calls,1);
  }
 });
+
+test('immediate post helper resolves the numeric target and sends exact text once',async()=>{
+ const calls=[],input={requestId:'post-stable',text:'  Exact words.\nSecond line.  ',targetAccountId:'1234567890123456789',confirmed:true};
+ const receipt={requestHash:'a'.repeat(64),postId:'456',url:'https://x.com/i/status/456',accountId:input.targetAccountId,evidence:'bound-create-response',textVerified:true};
+ const result={...input,requestHash:'a'.repeat(64),status:'confirmed',connectionVersion:'generation',receipt};
+ const client=createClient(async(name,args)=>{calls.push({name,args});return {structuredContent:name==='get_account_status'?{publication:{immediate:{ready:true,target:{userId:input.targetAccountId}}}}:result};});
+ assert.deepEqual(await client.boom.postNow(input),result);
+ assert.deepEqual(calls,[{name:'get_account_status',args:{}},{name:'publish_post',args:input}]);
+});
+test('immediate posting stops on mismatched account, unavailable readiness and missing exact consent',async()=>{
+ const input={requestId:'stable',text:'Exact words',targetAccountId:'123',confirmed:true};
+ for(const immediate of [{ready:true,target:{userId:'456'}},{ready:false,reason:'Write grant unavailable',target:{userId:'123'}}]){
+  const calls=[],client=createClient(async name=>{calls.push(name);return {structuredContent:{publication:{immediate}}};});
+  await assert.rejects(client.boom.postNow(input));assert.deepEqual(calls,['get_account_status']);
+ }
+ let calls=0;const client=createClient(async()=>{calls++;return {};});await assert.rejects(client.boom.postNow({...input,confirmed:false}));assert.equal(calls,0);
+});
+test('an uncertain publication or lost response never triggers another send',async()=>{
+ const input={requestId:'stable',text:'Exact words',targetAccountId:'123',confirmed:true};
+ for(const lost of [false,true]){
+  const calls=[],client=createClient(async name=>{calls.push(name);if(name==='get_account_status')return {structuredContent:{publication:{immediate:{ready:true,target:{userId:'123'}}}}};if(lost)throw Error('Connection lost');return {structuredContent:{...input,status:'uncertain',receipt:null}};});
+  if(lost)await assert.rejects(client.boom.postNow(input),/lost/);else assert.equal((await client.boom.postNow(input)).status,'uncertain');
+  assert.deepEqual(calls,['get_account_status','publish_post']);
+ }
+});
+test('post preparation freezes the exact text before asynchronous account inspection',async()=>{
+ const original={requestId:'immutable-post',text:'The exact authorized words',targetAccountId:'123',confirmed:true},calls=[];
+ const client=createClient(async(name,args)=>{
+  calls.push({name,args});
+  if(name==='get_account_status'){original.text='A later unrelated draft';return {structuredContent:{publication:{immediate:{ready:true,target:{userId:'123'}}}}};}
+  return {structuredContent:{...args,status:'uncertain',connectionVersion:'generation',receipt:null}};
+ });
+ const result=await client.boom.postNow(original);assert.equal(result.text,'The exact authorized words');assert.equal(calls[1].args.text,'The exact authorized words');assert.equal(original.text,'A later unrelated draft');
+});
+test('a receipt that does not bind the exact request remains unresolved and is never retried',async()=>{
+ const input={requestId:'receipt-fixture',text:'Exact words',targetAccountId:'123',confirmed:true},hash='a'.repeat(64);
+ for(const change of [{text:'Different words'},{receipt:{requestHash:'b'.repeat(64)}},{receipt:{url:'https://x.com/i/status/999'}}]){
+  const calls=[],client=createClient(async name=>{calls.push(name);if(name==='get_account_status')return {structuredContent:{publication:{immediate:{ready:true,target:{userId:'123'}}}}};
+   const receipt={requestHash:hash,postId:'789',url:'https://x.com/i/status/789',accountId:'123',evidence:'bound-create-response',textVerified:true,...change.receipt};
+   return {structuredContent:{...input,requestHash:hash,status:'confirmed',connectionVersion:'generation',...change,receipt}};
+  });
+  await assert.rejects(client.boom.postNow(input),error=>error.publicationAttempted===true);assert.deepEqual(calls,['get_account_status','publish_post']);
+ }
+});
