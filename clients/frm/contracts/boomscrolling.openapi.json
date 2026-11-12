@@ -1449,6 +1449,12 @@
                               "minLength": 1,
                               "maxLength": 15,
                               "pattern": "^[A-Za-z0-9_]+$"
+                            },
+                            "avatarUrl": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048,
+                              "pattern": "^https://pbs\\.twimg\\.com/(profile_images|default_profile_images)/"
                             }
                           },
                           "required": [
@@ -1479,6 +1485,69 @@
                               "type": "string",
                               "minLength": 1,
                               "maxLength": 100
+                            },
+                            "handle": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 15,
+                              "pattern": "^[A-Za-z0-9_]+$"
+                            },
+                            "avatarUrl": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048,
+                              "pattern": "^https://pbs\\.twimg\\.com/(profile_images|default_profile_images)/"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 40
+                            },
+                            "media": {
+                              "type": "array",
+                              "maxItems": 4,
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "photo",
+                                      "video",
+                                      "animated_gif"
+                                    ]
+                                  },
+                                  "url": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 2048,
+                                    "pattern": "^https://pbs\\.twimg\\.com/"
+                                  },
+                                  "alt": {
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 2000
+                                  },
+                                  "width": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 32768
+                                  },
+                                  "height": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 32768
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "url"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "mediaUnavailable": {
+                              "type": "boolean"
                             }
                           },
                           "required": [

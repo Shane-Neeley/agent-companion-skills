@@ -191,3 +191,9 @@ node clients/frm/cli.mjs --demo
 The tests use a fictional local server and cover PKCE, issuer/resource checks, callback state, refresh rotation, owner-only storage, scope enforcement, revocation, bounded verified snapshot downloads and refusal to retry draft calls. They do not prove a paid production login, Claude connector acceptance or customer usefulness. The demo is offline and makes no network request.
 
 Product information: [BoomScrolling](https://fortrockmedia.com/boomscrolling/) · [Agent Setup Kit](https://fortrockmedia.com/agent-setup-kit/). Hosted availability and access rules govern; this client is not a separate paid offer.
+
+### Original post appearance
+
+Writer packets can preserve `persona.avatarUrl` and source `handle`, `avatarUrl`, `createdAt`, `media` and `mediaUnavailable`. Profile photos must use X's HTTPS profile-image host (`pbs.twimg.com/profile_images/` or `default_profile_images/`). Source media accepts up to four photo/video/GIF thumbnail previews on `pbs.twimg.com`; candidate images still use private uploaded keys. The CLI passes these fields in the same JSON packet as the SDK. Use captured source metadata, never guessed photos or dates. Existing candidate IDs remain immutable, including their originally supplied metadata. Yours can load X's actual embedded original for older imports without rewriting their records.
+
+The complete app/API/CLI engineering inventory lives in the app repository's `docs/api-coverage.md`. Current supported product tools and all six SDK/CLI methods are listed above. Browser-only routes do not accept the CLI OAuth token; delegated clients use `/agent/mcp`.

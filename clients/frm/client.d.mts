@@ -3,7 +3,9 @@ export type ToolCaller=(name:string,args:Record<string,unknown>)=>Promise<ToolRe
 export interface Source {id:string;sourceVersion:string;text:string;url:string;truncated:boolean;}
 export interface DraftProposal {requestId:string;expectedRevision:number;postId:string;sourceVersion:string;form:'reply'|'quote';text:string;}
 export interface CandidateMedia {key:string;type:'photo'|'animated_gif';alt?:string;}
-export interface Candidate {id:string;kind:'original'|'quote'|'reply';persona:{name:string;handle:string};text:string;source?:{url:string;text:string;author:string};media?:CandidateMedia[];tags?:Record<string,string>;legacyId?:string;}
+export interface SourceMedia {type:'photo'|'video'|'animated_gif';url:string;alt?:string;width?:number;height?:number;}
+export interface CandidateSource {url:string;text:string;author:string;handle?:string;avatarUrl?:string;createdAt?:string;media?:SourceMedia[];mediaUnavailable?:boolean;}
+export interface Candidate {id:string;kind:'original'|'quote'|'reply';persona:{name:string;handle:string;avatarUrl?:string};text:string;source?:CandidateSource;media?:CandidateMedia[];tags?:Record<string,string>;legacyId?:string;}
 export interface CandidateResult {results:{id:string;status:'created'|'unchanged'|'conflict'}[];reviewRequired:true;funding:'caller_runtime';}
 export interface MediaUpload {contentType:'image/png'|'image/jpeg'|'image/gif'|'image/webp';dataBase64:string;}
 export interface MediaResult {key:string;sha256:string;bytes:number;reviewRequired:true;}
