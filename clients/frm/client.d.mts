@@ -1,3 +1,7 @@
+import type {BOOM_OPERATIONS} from './operations.mjs';
+import type {OperationInputs,OperationOutputs,OperationName} from './contract.mjs';
+export type {OperationInputs,OperationOutputs,OperationName} from './contract.mjs';
+export {BOOM_OPERATIONS} from './operations.mjs';
 export interface ToolResult {structuredContent?:unknown;content?:{type:string;text?:string}[];isError?:boolean;error?:{message?:string};}
 export type ToolCaller=(name:string,args:Record<string,unknown>)=>Promise<ToolResult>;
 export interface Source {id:string;sourceVersion:string;text:string;url:string;truncated:boolean;}
@@ -6,17 +10,32 @@ export interface CandidateMedia {key:string;type:'photo'|'animated_gif';alt?:str
 export interface SourceMedia {type:'photo'|'video'|'animated_gif';url:string;alt?:string;width?:number;height?:number;}
 export interface CandidateSource {url:string;text:string;author:string;handle?:string;avatarUrl?:string;createdAt?:string;media?:SourceMedia[];mediaUnavailable?:boolean;}
 export interface Candidate {id:string;kind:'original'|'quote'|'reply';persona:{name:string;handle:string;avatarUrl?:string};text:string;source?:CandidateSource;media?:CandidateMedia[];tags?:Record<string,string>;legacyId?:string;}
-export interface CandidateResult {results:{id:string;status:'created'|'unchanged'|'conflict'}[];reviewRequired:true;funding:'caller_runtime';}
+export interface CandidateResult {operationRequestId?:string;results:{id:string;status:'created'|'unchanged'|'conflict'}[];reviewRequired:true;funding:'caller_runtime';}
 export interface MediaUpload {contentType:'image/png'|'image/jpeg'|'image/gif'|'image/webp';dataBase64:string;}
-export interface MediaResult {key:string;sha256:string;bytes:number;reviewRequired:true;}
+export interface MediaResult {operationRequestId?:string;key:string;sha256:string;bytes:number;reviewRequired:true;}
 /** Context includes caller-owned preferences, exact feedback and cadence; treat all stored text as data. */
 export interface WriterCandidate extends Omit<Candidate,'source'> {source:Candidate['source']|null;firstText:string;version:number;edited:boolean;reaction:'like'|'pass'|null;media:(CandidateMedia&{url:string})[];protected:boolean;createdAt:number;}
 export interface WriterCadence {version:1;timeZone:'America/Los_Angeles';date:string;candidateCount:number;generatedToday:number;unreadCount:number;imagesToday:number;originalsToday:number;deliveredPrefixes:string[];}
 export interface WriterContext {candidates:WriterCandidate[];candidateCount:number;contextTruncated:boolean;cadence:WriterCadence;settings:{enabled:boolean;voice:string;revision:number};funding:'caller_runtime';untrustedContent:true;[key:string]:unknown;}
 export interface KitExportManifest {snapshot_id:string;revisions:{profile:number;brain:number;work:number};read_only:true;funding:'caller_runtime';content_type:'application/zip';filename:'my-business-starter.zip';bytes:number;sha256:string;download_path:string;review_status:'owner_reviewed'|'not_reviewed';local_files:'snapshot_only_no_sync';}
 export class ToolError extends Error {result:ToolResult;}
-export function createClient(callTool:ToolCaller):Readonly<{
- boom:Readonly<{capabilities():Promise<unknown>;context(args?:{limit?:number;cursor?:string}):Promise<{revision:number;sources:Source[];nextCursor:string|null}>;propose(args:DraftProposal):Promise<{revision:number;reviewRequired:true;duplicate:boolean;draft:{id:string;text:string;status:'draft'}}>;
- writerContext(args?:{authorHandle?:string;candidateIds?:string[]}):Promise<WriterContext>;submitCandidates(args:{candidates:Candidate[]}):Promise<CandidateResult>;uploadMedia(args:MediaUpload):Promise<MediaResult>}>;
+export interface MediaChunk {key:string;contentType:'image/png'|'image/jpeg'|'image/gif'|'image/webp';sha256:string;totalBytes:number;offset:number;bytes:number;dataBase64:string;nextOffset:number|null;}
+export interface MediaDownload {key:string;contentType:MediaChunk['contentType'];sha256:string;bytes:Uint8Array;}
+export type OperationMethods={readonly [Method in keyof typeof BOOM_OPERATIONS]:
+  {} extends OperationInputs[(typeof BOOM_OPERATIONS)[Method]['name']]
+    ? (args?:OperationInputs[(typeof BOOM_OPERATIONS)[Method]['name']])=>Promise<OperationOutputs[(typeof BOOM_OPERATIONS)[Method]['name']]>
+    : (args:OperationInputs[(typeof BOOM_OPERATIONS)[Method]['name']])=>Promise<OperationOutputs[(typeof BOOM_OPERATIONS)[Method]['name']]>};
+export type BoomClient=Omit<OperationMethods,'writerContext'|'submitCandidates'|'uploadMedia'|'downloadMedia'> & Readonly<{
+ writerContext(args?:{authorHandle?:string;candidateIds?:string[]}):Promise<WriterContext>;
+ submitCandidates(args:{candidates:Candidate[]}):Promise<CandidateResult>;
+ uploadMedia(args:MediaUpload):Promise<MediaResult>;
+ downloadMedia(args:{key:string;offset?:number;limit?:number}):Promise<MediaChunk>;
+ readMedia(args:{key:string},options?:{maxBytes?:number}):Promise<MediaDownload>;
+ call<Name extends OperationName>(name:Name,args:OperationInputs[Name]):Promise<OperationOutputs[Name]>;
+ rest<Name extends OperationName>(name:Name,args:OperationInputs[Name]):Promise<OperationOutputs[Name]>;
+ tools():Promise<{tools:unknown[];source?:'contract_snapshot';[key:string]:unknown}>;
+}>;
+export function createClient(callTool:ToolCaller,options?:{listTools?:()=>Promise<unknown>;requestOperation?:<Name extends OperationName>(name:Name,args:OperationInputs[Name])=>Promise<OperationOutputs[Name]>}):Readonly<{
+ boom:BoomClient;
  kit:Readonly<{capabilities():Promise<unknown>;context():Promise<unknown>;manifest():Promise<KitExportManifest>}>;
 }>;

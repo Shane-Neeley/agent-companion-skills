@@ -1,3 +1,4 @@
+import {BOOM_OPERATIONS,BOOM_OPERATION_SCOPES} from './operations.mjs';
 // Product OAuth only. This module never handles an agent provider's credentials.
 import {createServer} from 'node:http';
 import {randomBytes, createHash, timingSafeEqual} from 'node:crypto';
@@ -7,7 +8,7 @@ import {homedir} from 'node:os';
 import {join, resolve} from 'node:path';
 
 export const PRODUCTS=Object.freeze({
-  boom:Object.freeze({origin:'https://boomscrolling.fortrockmedia.com',scopes:['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write']}),
+  boom:Object.freeze({origin:'https://boomscrolling.fortrockmedia.com',scopes:['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write'],optionalScopes:['boom.drafts.read','boom.settings.read','boom.review.read','boom.drafts.manage','boom.writer.manage','boom.workspace.write','boom.workspace.export','boom.settings.write','boom.review.write','boom.account.read','boom.account.write','boom.provider.use']}),
   kit:Object.freeze({origin:'https://fortrockmedia.com',scopes:['kit.workspace.read','kit.workspace.export']}),
 });
 const VERSION='2026-07-28';
@@ -88,20 +89,23 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
   const config=PRODUCTS[product];if(!config)fail('Choose boom or kit.');
   const origin=originURL(injectedOrigin||config.origin),resource=origin+'/agent/mcp';
   if(![VERSION,'2025-11-25'].includes(protocolVersion))fail('Unsupported MCP protocol version.');
+  const allScopes=[...config.scopes,...(config.optionalScopes||[])];
   function credential(value) {
-    if(!value||value.issuer!==origin||value.resource!==resource||typeof value.clientId!=='string'||typeof value.refreshToken!=='string'||typeof value.accessToken!=='string'||!Array.isArray(value.scopes)||value.scopes.some(scope=>!config.scopes.includes(scope))||!Number.isFinite(value.expiresAt))fail('Missing or incompatible credentials. Run login for this product.');
+    if(!value||value.issuer!==origin||value.resource!==resource||typeof value.clientId!=='string'||typeof value.refreshToken!=='string'||typeof value.accessToken!=='string'||!Array.isArray(value.scopes)||value.scopes.some(scope=>!allScopes.includes(scope))||!Number.isFinite(value.expiresAt))fail('Missing or incompatible credentials. Run login for this product.');
     return value;
   }
   async function form(url,values,label) {
     return json(await request(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(values)}),label);
   }
-  async function login({onAuthorization,readOnly=false}={}) {
+  async function login({onAuthorization,readOnly=false,full=false,scopes:chosenScopes}={}) {
     if(typeof onAuthorization!=='function')fail('Supply onAuthorization(url) to open or display the browser sign-in URL.');
+    if([readOnly,full,chosenScopes!==undefined].filter(Boolean).length>1)fail('Choose only one of readOnly, full or explicit scopes.');
+    const scopes=chosenScopes===undefined?(readOnly?config.scopes.slice(0,1):full?allScopes:config.scopes):chosenScopes;
+    if(!Array.isArray(scopes)||!scopes.length||scopes.some(scope=>typeof scope!=='string'||!allScopes.includes(scope))||new Set(scopes).size!==scopes.length)fail('Choose valid, distinct product scopes.');
     return store.locked(product,async()=>{
       // Existing grants must be explicitly logged out before replacement.
       if(await store.read(product))fail('Already connected. Log out before connecting a different account or changing scopes.');
       const metadata=await discover(origin),state=random(),verifier=random();
-      const scopes=readOnly?config.scopes.slice(0,1):config.scopes;
       let settle,settled=false,timer;
       const callback=new Promise((resolve,reject)=>{settle=(error,value)=>{if(settled)return;settled=true;error?reject(error):resolve(value);};});
       // Attach rejection immediately while registration/browser setup is in progress.
@@ -149,12 +153,12 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
   async function authorized(scope,operation) {
     return store.locked(product,async()=>{
       let value=credential(await store.read(product));
-      if(!value.scopes.includes(scope))fail('Operation is unavailable for this connection or granted scopes.');
+      if(scope&&!value.scopes.includes(scope))fail('Operation is unavailable for this connection or granted scopes.');
       if(value.expiresAt<=Date.now()+30_000){
         const metadata=await discover(origin);
         const tokens=validateToken(await form(metadata.token,{grant_type:'refresh_token',refresh_token:value.refreshToken,client_id:value.clientId,resource},'Token refresh'),value.scopes);
         value={...value,...tokens};await store.write(product,value);
-        if(!value.scopes.includes(scope))fail('The refreshed connection lacks the required scope. Reconnect to update permissions.');
+        if(scope&&!value.scopes.includes(scope))fail('The refreshed connection lacks the required scope. Reconnect to update permissions.');
       }
       return operation(value);
     });
@@ -187,10 +191,8 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
       return bytes;
     });
   }
-  async function callTool(name,args={}) {
-    const scope=name==='propose_draft'?'boom.drafts.write':name==='get_writer_context'?'boom.writer.read':['submit_candidates','upload_media'].includes(name)?'boom.writer.write':name==='kit_get_export_manifest'?'kit.workspace.export':product==='boom'?'boom.workspace.read':'kit.workspace.read';
-    const allowed=product==='boom'?['get_capabilities','get_workspace_context','propose_draft','get_writer_context','submit_candidates','upload_media']:['kit_get_capabilities','kit_get_workspace_context','kit_get_export_manifest'];
-    if(!allowed.includes(name))fail('Tool is unavailable for this product.');
+  async function resourceCall(method,params,scope) {
+
     return authorized(scope,async value=>{
       const clientInfo={name:'fort-rock-media-client',version:'1.0.0'};
       const headers={'Content-Type':'application/json',Accept:'application/json, text/event-stream',Authorization:'Bearer '+value.accessToken,'MCP-Protocol-Version':protocolVersion};
@@ -203,7 +205,7 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
         if(!notified.ok)fail('MCP initialization notification failed.');
       }
       const meta={'io.modelcontextprotocol/protocolVersion':VERSION,'io.modelcontextprotocol/clientCapabilities':{},'io.modelcontextprotocol/clientInfo':clientInfo};
-      const response=await post('tools/call',{name,arguments:args,...(protocolVersion===VERSION?{_meta:meta}:{})});
+      const response=await post(method,{...params,...(protocolVersion===VERSION?{_meta:meta}:{})});
       // Never retry a resource call: a timeout may have happened after a draft was saved.
       const envelope=await json(response,'MCP call');
       if(envelope.jsonrpc!=='2.0'||envelope.id!==1)fail('Invalid MCP response.');
@@ -212,5 +214,31 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
       return envelope.result;
     });
   }
-  return Object.freeze({login,status,logout,callTool,downloadKitExport});
+  async function callTool(name,args={}) {
+    const scopes=product==='boom'?BOOM_OPERATION_SCOPES:{kit_get_capabilities:'kit.workspace.read',kit_get_workspace_context:'kit.workspace.read',kit_get_export_manifest:'kit.workspace.export'};
+    const scope=scopes[name];if(!scope)fail('Tool is unavailable for this product.');
+    return resourceCall('tools/call',{name,arguments:args},scope);
+  }
+  async function requestOperation(name,args={}) {
+    if(product!=='boom')fail('Direct product REST is only available for BoomScrolling.');
+    const operation=Object.values(BOOM_OPERATIONS).find(operation=>operation.name===name);
+    if(!operation)fail('Operation is unavailable for this product.');
+    if(!args||typeof args!=='object'||Array.isArray(args))fail('Use an operation argument object.');
+    return authorized(operation.scope,async value=>{
+      const {method,path}=operation.http;
+      if(!['GET','POST'].includes(method)||!path.startsWith('/api/v1/')||path.includes('..')||path.includes('?')||path.includes('#'))fail('Invalid product REST operation.');
+      const url=new URL(path,origin);
+      if(method==='GET')for(const [key,input] of Object.entries(args)){
+        if(input!==undefined)url.searchParams.set(key,Array.isArray(input)?input.join(','):String(input));
+      }
+      const response=await request(url,{method,headers:{Authorization:'Bearer '+value.accessToken,Accept:'application/json',...(method==='POST'?{'Content-Type':'application/json'}:{})},...(method==='POST'?{body:JSON.stringify(args)}:{})});
+      let result;try{result=await response.json();}catch{fail('REST operation returned invalid JSON.');}
+      if(!response.ok){const error=new Error(result?.error||`REST operation failed (HTTP ${response.status}).`);error.status=response.status;error.code=result?.code;error.requestId=result?.requestId;throw error;}
+      return result;
+    });
+  }
+  async function listTools() {
+    return resourceCall('tools/list',{},null);
+  }
+  return Object.freeze({login,status,logout,callTool,listTools,requestOperation,downloadKitExport});
 }

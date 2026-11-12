@@ -31,6 +31,10 @@ async function fixture(t,{badIssuer=false,redirectToken=false,failedCall=false,f
       }else{assert.equal(form.get('grant_type'),'refresh_token');assert.equal(form.get('refresh_token'),'fictional-refresh-'+refresh);refresh++;}
       return send(200,{access_token:'fictional-access-'+refresh,refresh_token:'fictional-refresh-'+refresh,token_type:'Bearer',expires_in:3600,scope:authorization.searchParams.get('scope')});
     }
+    if(url.pathname.startsWith('/api/v1/')){
+      assert.equal(req.headers.authorization,'Bearer fictional-access-'+refresh);
+      return send(failedCall?503:200,{synthetic:true,path:url.pathname,query:Object.fromEntries(url.searchParams),body:body?JSON.parse(body):null});
+    }
     if(url.pathname==='/agent/mcp'){
       assert.equal(req.headers.authorization,'Bearer fictional-access-'+refresh);
       const rpc=JSON.parse(body);
@@ -203,4 +207,50 @@ test('Kit download rejects changed snapshots, bad type, size, checksum and redir
       assert.equal(f.calls.some(call=>call.path==='/unexpected-export-destination'),false);
     });
   }
+});
+
+test('full and explicit logins ask for new scopes only after opt-in and refresh cannot expand them',async t=>{
+ const f=await fixture(t);const login=await f.connection.login({full:true,onAuthorization:f.authorize});
+ for(const scope of ['boom.drafts.read','boom.settings.read','boom.review.read','boom.drafts.manage','boom.writer.manage','boom.workspace.write','boom.workspace.export','boom.settings.write','boom.review.write','boom.account.read','boom.account.write','boom.provider.use'])assert.ok(login.scopes.includes(scope));
+ const saved=await f.store.read('boom');await f.store.write('boom',{...saved,expiresAt:0});
+ await f.connection.callTool('get_account_status');
+ assert.deepEqual((await f.store.read('boom')).scopes,login.scopes);
+ const refresh=new URLSearchParams(f.calls.filter(call=>call.path==='/agent/token').at(-1).body);
+ assert.equal(refresh.has('scope'),false);
+ await f.connection.logout();
+ const explicit=await f.connection.login({scopes:['boom.writer.read'],onAuthorization:f.authorize});assert.deepEqual(explicit.scopes,['boom.writer.read']);
+ await f.connection.callTool('list_candidates',{});
+ const before=f.calls.length;await assert.rejects(f.connection.callTool('update_writer_settings',{}),/granted scopes/);assert.equal(f.calls.length,before);
+});
+
+test('invalid or combined scope requests fail without creating an authorization',async t=>{
+ const f=await fixture(t);
+ for(const options of [{full:true,readOnly:true},{scopes:[]},{scopes:['boom.workspace.read','boom.workspace.read']},{scopes:['boom.publish']},{full:true,scopes:['boom.workspace.read']}])await assert.rejects(f.connection.login({...options,onAuthorization:f.authorize}));
+ assert.equal(f.calls.length,0);
+});
+
+test('live tool discovery sends tools/list once and does not require a workspace-read grant',async t=>{
+ const f=await fixture(t);await f.connection.login({scopes:['boom.writer.read'],onAuthorization:f.authorize});
+ await f.connection.listTools();
+ const calls=f.calls.filter(call=>call.path==='/agent/mcp');assert.equal(calls.length,1);assert.equal(JSON.parse(calls[0].body).method,'tools/list');
+});
+
+test('the same scoped token calls only registered canonical REST operations and never retries failures',async t=>{
+ const f=await fixture(t);await f.connection.login({onAuthorization:f.authorize});
+ const read=await f.connection.requestOperation('list_sources',{limit:7,query:'fixture'});
+ assert.equal(read.path,'/api/v1/sources');assert.deepEqual(read.query,{limit:'7',query:'fixture'});
+ const draft=await f.connection.requestOperation('propose_draft',{requestId:'stable-fixture',text:'Exact supplied words'});
+ assert.deepEqual(draft.body,{requestId:'stable-fixture',text:'Exact supplied words'});
+ const before=f.calls.length;await assert.rejects(f.connection.requestOperation('update_preferences',{}),/granted scopes/);await assert.rejects(f.connection.requestOperation('https://attacker.invalid/token',{}),/unavailable/);assert.equal(f.calls.length,before);
+ const failed=await fixture(t,{failedCall:true});await failed.connection.login({onAuthorization:failed.authorize});
+ await assert.rejects(failed.connection.requestOperation('propose_draft',{requestId:'fixture'}));assert.equal(failed.calls.filter(call=>call.path==='/api/v1/draft-proposals').length,1);
+ assert.equal(f.calls.some(call=>call.path.includes('fictional-access')||call.headers.origin),false);
+});
+
+test('existing writer-default grants do not gain authority to edit or retire earlier work',async t=>{
+ const f=await fixture(t);const login=await f.connection.login({onAuthorization:f.authorize});
+ assert.deepEqual(login.scopes,['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write']);
+ const before=f.calls.length;
+ for(const name of ['list_drafts','get_draft','get_preferences','get_feedback','edit_draft','cancel_draft','edit_candidate','retire_candidate','record_authored_post'])await assert.rejects(f.connection.callTool(name,{}),/granted scopes/);
+ assert.equal(f.calls.length,before);
 });

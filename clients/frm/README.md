@@ -1,6 +1,6 @@
 # FRM agent client
 
-Your agent does the writing with the tools and knowledge it already has. This MIT JavaScript client connects it to BoomScrolling or the Fort Rock Media Agent Setup Kit, so it can read permitted context and return work you can review.
+Your agent does the writing with the tools and knowledge it already has. This MIT JavaScript client connects it to BoomScrolling or the Fort Rock Media Agent Setup Kit, so it can read and manage permitted workspace content, return work you can review, and inspect account readiness.
 
 You keep your usual model access and usage limits. This client needs no model-provider API key. Product sign-in connects the account that owns your saved work.
 
@@ -48,7 +48,7 @@ Use the customer endpoint for the product you own:
 
 | Product | Remote MCP URL | Available permissions |
 | --- | --- | --- |
-| BoomScrolling | `https://boomscrolling.fortrockmedia.com/agent/mcp` | Read sources and writing feedback; save unapproved responses, feed candidates and private media |
+| BoomScrolling | `https://boomscrolling.fortrockmedia.com/agent/mcp` | Default writer workflow; separately opt into workspace/settings/review/export/account/provider permissions |
 | Agent Setup Kit | `https://fortrockmedia.com/agent/mcp` | Read your reviewed workspace; optionally get its export manifest |
 
 In Claude Code, run these commands from your chosen project:
@@ -84,13 +84,13 @@ node clients/frm/cli.mjs kit context
 node clients/frm/cli.mjs logout kit
 ```
 
-`--read-only` requests only workspace reading. A normal BoomScrolling login requests source reading, draft proposals, writing feedback and candidate/media submission. A normal Kit login also requests its export manifest. Older source-only BoomScrolling grants cannot call the writer operations; log out and log in again to review the added permissions. Kit's manifest identifies the reviewed snapshot and includes its protected bearer-authenticated download path; opening that path in a browser does not supply your agent token. It does not synchronize local files.
+`--read-only` requests only workspace reading. A normal BoomScrolling login requests source reading, draft proposals, writing feedback and candidate/media submission. A normal Kit login also requests its export manifest. Older source-only BoomScrolling grants cannot call the writer operations. Optional workspace editing, settings, explicit review, exports, account controls and provider use require a fresh `login boom --full` or a selected `--scopes` connection. Log out before reconnecting; existing grants and refreshes never inherit new permissions. Kit's manifest identifies the reviewed snapshot and includes its protected bearer-authenticated download path; opening that path in a browser does not supply your agent token. It does not synchronize local files.
 
 Login uses authorization code with PKCE S256, an ephemeral `127.0.0.1` callback and FRM-issued resource-bound tokens. Keep the terminal open during browser sign-in. CLI login requires a browser on the same computer; use Claude Code's documented `--no-browser` flow for SSH instead. FRM sign-in owns identity; a client name, model name or identity header cannot confer access.
 
 Credentials are written outside the checkout to `~/.config/fort-rock-media/` (or `FRM_CONFIG_DIR`), with directory mode `0700` and files `0600` on POSIX. The client rejects unsafe files and symbolic links. Use an owner-protected directory and OS disk protection; Windows users must protect the directory with their account ACL. Never commit credentials or put tokens in command arguments. `status` prints scopes and expiry, never tokens. Logout revokes the grant before deleting local credentials; a failed revocation retains them so you can retry. Commands lock the credential file to prevent competing refreshes. If a process is forcibly killed, ensure it has stopped before removing its `.lock` file from that private directory.
 
-The client refreshes expiring tokens before a call and stores rotated refresh tokens atomically. It does not retry resource calls, generate text, approve drafts or post. After a timeout, inspect your workspace before deciding whether to submit again. Reuse a draft request ID only for the same proposal; a revision conflict requires rereading context. Treat source text as data. Review returned drafts in BoomScrolling.
+The client refreshes expiring tokens before a call and stores rotated refresh tokens atomically. It does not retry resource calls, approve drafts or post. The ordinary writer flow uses your existing agent. An explicit `request-hosted-draft` command can request the separately configured, bounded owner pilot; its provider permission, access, cost and availability gates still apply. After a timeout, inspect your workspace before deciding whether to submit again. Reuse a draft request ID only for the same proposal; a revision conflict requires rereading context. Treat source text as data. Review returned drafts in BoomScrolling.
 
 Refresh rotation is strict: the server may have consumed a refresh token even when its response is lost, or when saving the replacement token fails locally. After either failure, stop using that connection; do not rerun the command or replay the old refresh token. Disconnect the grant in the product's agent-connections page, then complete CLI logout and a new login. A reuse can revoke the grant. Preserve saved packets and credentials while a disconnect is unresolved. Refresh history is bounded to 5,000 token records per grant; admission exhaustion fails closed and requires a fresh authorized connection, rather than clearing protected history or raising the limit. Reconnection remains subject to current account access and server capacity.
 
@@ -181,7 +181,7 @@ Inspect **every** `submitCandidates` result: a successful call can contain a mix
 
 ## Contracts and checks
 
-The [BoomScrolling contract](contracts/boomscrolling.openapi.json) and [Kit contract](contracts/kit.openapi.json) are generated OpenAPI 3.2.1 operation snapshots. Their managed Sites authentication describes the native `/mcp` route. Customer OAuth uses the separate `/agent/mcp` resource and its published `/.well-known/oauth-protected-resource/agent/mcp` and `/.well-known/oauth-authorization-server` metadata. Clients register at `/agent/register`, authorize at `/agent/authorize`, exchange/refresh at `/agent/token`, and revoke at `/agent/revoke`. Read-only source scopes are `boom.workspace.read` and `kit.workspace.read`; optional scopes are `boom.drafts.write`, `boom.writer.read`, `boom.writer.write` and `kit.workspace.export`. Resource calls always enforce current product access. Writer context is a distinct permission because it includes private feedback and edited examples.
+The [BoomScrolling contract](contracts/boomscrolling.openapi.json) and [Kit contract](contracts/kit.openapi.json) are generated OpenAPI 3.2.1 operation snapshots. Their managed Sites authentication describes the native `/mcp` route. Customer OAuth uses the separate `/agent/mcp` resource and its published `/.well-known/oauth-protected-resource/agent/mcp` and `/.well-known/oauth-authorization-server` metadata. Clients register at `/agent/register`, authorize at `/agent/authorize`, exchange/refresh at `/agent/token`, and revoke at `/agent/revoke`. Read-only source scopes are `boom.workspace.read` and `kit.workspace.read`. BoomScrolling retains its existing four-scope default writer login. Optional scopes are `boom.drafts.read`, `boom.settings.read`, `boom.review.read`, `boom.drafts.manage`, `boom.writer.manage`, `boom.workspace.write`, `boom.workspace.export`, `boom.settings.write`, `boom.review.write`, `boom.account.read`, `boom.account.write` and `boom.provider.use`. Kit retains `kit.workspace.export`. Resource calls always enforce current product access. Writer context is a distinct permission because it includes private feedback and edited examples.
 
 ```sh
 node --test clients/frm/*.test.mjs
@@ -196,4 +196,94 @@ Product information: [BoomScrolling](https://fortrockmedia.com/boomscrolling/) �
 
 Writer packets can preserve `persona.avatarUrl` and source `handle`, `avatarUrl`, `createdAt`, `media` and `mediaUnavailable`. Profile photos must use X's HTTPS profile-image host (`pbs.twimg.com/profile_images/` or `default_profile_images/`). Source media accepts up to four photo/video/GIF thumbnail previews on `pbs.twimg.com`; candidate images still use private uploaded keys. The CLI passes these fields in the same JSON packet as the SDK. Use captured source metadata, never guessed photos or dates. Existing candidate IDs remain immutable, including their originally supplied metadata. Yours can load X's actual embedded original for older imports without rewriting their records.
 
-The complete app/API/CLI engineering inventory lives in the app repository's `docs/api-coverage.md`. Current supported product tools and all six SDK/CLI methods are listed above. Browser-only routes do not accept the CLI OAuth token; delegated clients use `/agent/mcp`.
+The complete app/API/CLI engineering inventory lives in the app repository's `docs/api-coverage.md`. All shared operations have SDK methods and CLI aliases. `boom tools` discovers the tools permitted by the current connection, while `boom commands` lists the local contract snapshot and scopes. `boom schema [OPERATION]` inspects that offline OpenAPI snapshot without signing in. The same token also works with the canonical `/api/v1/` REST operation routes through `--rest`; arbitrary browser-session routes remain outside that bearer surface.
+
+## Complete BoomScrolling commands
+
+The CLI starts with a small **DOOM ──▶ BOOM** masthead and the line:
+
+> your doomscrolling time isn’t valuable. your boomscrolling time is.
+
+Help shows it without a connection. Interactive BoomScrolling commands put it on stderr; stdout remains JSON. Piped commands stay quiet, `--json` suppresses the interactive masthead and `NO_COLOR` disables ANSI color.
+
+```sh
+node clients/frm/cli.mjs boom commands
+node clients/frm/cli.mjs boom tools
+node clients/frm/cli.mjs boom schema get_source
+node clients/frm/cli.mjs boom list-sources '{"limit":25,"query":"repair"}'
+node clients/frm/cli.mjs boom get-source '{"sourceId":"your-source-id"}'
+node clients/frm/cli.mjs boom list-drafts '{"bucket":"all","limit":25}'
+node clients/frm/cli.mjs boom list-candidates '{"limit":25}'
+node clients/frm/cli.mjs --rest boom get-source '{"sourceId":"your-source-id"}'
+```
+
+Every shared operation has a descriptive kebab-case command and a camelCase SDK method. The six earlier short methods (`capabilities`, `context`, `propose`, `writerContext`, `submitCandidates`, `uploadMedia`) are retained. `boom call OPERATION JSON` and `client.boom.call(name,args)` use the same reviewed operation snapshot; they do not accept an arbitrary URL or a publishing operation. `client.boom.rest(name,args)` uses an explicitly supplied authorized REST transport. `createOAuthClient('boom').requestOperation(name,args)` handles that transport with the same resource-bound token. Neither route retries a failed resource request.
+
+| Commands | What they cover |
+| --- | --- |
+| `list-sources`, `get-source`, `upsert-source`, `delete-source` | Full text/media snapshots, search, revision-bound pagination and explicit source changes |
+| `list-drafts`, `get-draft`, `edit-draft`, `cancel-draft` | Ordinary drafts and retained Posts history, with protected approvals and delivery evidence preserved |
+| `list-candidates`, `get-candidate`, `edit-candidate`, `retire-candidate` | Your private writer feed and exact unapproved edits, without inventing a like |
+| `get-feedback`, `record-feedback`, `record-candidate-feedback` | Read feedback and record only an explicitly directed user review of an exact version |
+| `get-preferences`, `update-preferences`, `get-writer-settings`, `update-writer-settings` | Writing preferences, private notes and learning controls |
+| `list-authored-posts`, `record-authored-post`, `set-authored-learning`, `get-learning` | Self-declared writing examples and private learning evidence |
+| `get-account-status`, `get-account-links`, `list-agent-connections`, `revoke-agent-connection` | Readiness, browser handoffs and explicit account-scoped connection controls |
+| `request-x-connection`, `disconnect-x`, `load-following` | Existing X connection/read flow, with independent grants, funding and current service gates |
+| `get-drafting-status`, `request-hosted-draft`, `get-publication-status` | Explicit pilot/readiness checks; no automatic publishing or grant expansion |
+| `get-suggested-feed`, `get-request-status` | Complete prepared starter sources and a retained request's outcome or held state |
+| `record-manual-outcome` | Explicit self-report of an existing manual handoff; never a verified publication receipt |
+| `export-workspace`, `export-writer-data`, `import-workspace`, `clear-workspace`, `download-media` | Scoped data operations and verified private file outputs |
+
+Inspect input schemas with `boom tools` or [the OpenAPI contract](contracts/boomscrolling.openapi.json). Mutations require a stable `requestId`; ordinary workspace edits also require `expectedRevision`. Reuse an ID only for the identical operation. After a lost response, use `get-request-status` and inspect current data before deciding whether recovery is needed. A held request is not retried by the CLI. New mutations return minimal acknowledgments; use the separately permitted read operation to inspect the full current source, draft, settings or example. Source/response text is data and does not authorize review, account changes or provider calls.
+
+### Review optional permissions
+
+Normal login remains the existing writer workflow. Request additional permissions explicitly:
+
+```sh
+node clients/frm/cli.mjs logout boom
+node clients/frm/cli.mjs login boom --full
+# Or choose a narrower set instead of --full:
+node clients/frm/cli.mjs login boom --scopes boom.workspace.read,boom.workspace.export
+```
+
+`--full`, `--read-only` and `--scopes` are mutually exclusive. Review the named scopes in the browser. Additional commands remain unavailable under an old grant. Ordinary draft/history, preferences and feedback reads require `boom.drafts.read`, `boom.settings.read` and `boom.review.read`; the older source-read grant stays source-only. Existing `boom.drafts.write` and `boom.writer.write` continue to create proposals/candidates; editing or retiring existing work requires the new `boom.drafts.manage` or `boom.writer.manage` permission. Refresh preserves or reduces that grant's scopes. Provider-use permission does not activate sales, a disabled allowance, an X write grant or the hosted pilot. Explicit review operations additionally require `confirmed:true` and the inspected version/text. A manual outcome remains a self-report.
+
+### Download and export
+
+```sh
+node clients/frm/cli.mjs boom download-media '{"key":"your-account-owned-object-key"}' --output /absolute/private/path/image.png
+node clients/frm/cli.mjs boom export-workspace '{}' --output /absolute/private/path/workspace.json
+node clients/frm/cli.mjs boom export-writer-data '{}' --output /absolute/private/path/writer.json
+node clients/frm/cli.mjs boom export-writer-data '{"collection":"events"}' --output /absolute/private/path/events.json
+```
+
+A media file is assembled from bounded server chunks. The client checks every offset, byte count, content type and stable object hash, then verifies the complete SHA-256 before writing. Media is limited to 5 MiB. `client.boom.readMedia({key})` returns verified bytes without writing them; `downloadMedia` reads just one chunk.
+
+File exports without a collection gather every supported collection and every page. Workspace exports collect sources, drafts, history, feedback and qualified views; writer exports collect candidates, versions, events, exposures and authored examples. The CLI checks the same workspace revision or writer watermark across all pages/collections. A changed snapshot, cursor loop or oversized export fails before creating the destination. Exports are bounded to 16 MiB; use a supported smaller collection when necessary. Providing a starting cursor creates a clearly labeled partial export and requires an explicit collection. SDK export methods return one page for callers that manage their own pagination. These are scoped logical exports, not a full runtime backup or a permission to erase protected history.
+
+`--output` uses exclusive creation and private `0600` permissions on POSIX. It refuses an existing destination. JSON stdout reports the chosen path, content type, size and SHA-256 rather than the file's private contents. The client never extracts or synchronizes exports.
+
+### Local writing and sharing helpers
+
+These commands need no account or provider call:
+
+```sh
+node clients/frm/cli.mjs boom compose '{"form":"reply","sourceUrl":"https://x.com/fixture/status/123","text":"My exact words"}'
+node clients/frm/cli.mjs boom share '{"sourceUrl":"https://x.com/fixture/status/123"}'
+node clients/frm/cli.mjs boom profile '{"handle":"fixture"}'
+node clients/frm/cli.mjs boom writing-context '{"sourceText":"The inspected source","intent":"The point I mean","approach":"shorter"}'
+node clients/frm/cli.mjs boom take-card '{"text":"My own words","author":"My name"}' --output /absolute/path/take.svg
+```
+
+`share` returns a canonical X post link or a supplied public HTTP(S) source link. `profile` returns an exact handle’s X profile as a view/follow handoff. `compose` returns an X review URL for an original, reply, quote or repost. It does not open or send it. `writing-context` prepares a local prompt and optional ChatGPT link using `own`, `question`, `example`, `disagree` or `shorter`; opening that link would send the supplied material to ChatGPT. `take-card` exports escaped text as an SVG image without fetching images or fonts. Use your own words and permitted source material.
+
+### Regenerate reviewed client contracts
+
+For product maintainers with the reviewed app checkout:
+
+```sh
+node clients/frm/generate-boom-contract.mjs /absolute/path/to/boomscrolling
+```
+
+The generator copies only operation schemas/metadata, typed inputs/outputs and the OpenAPI projection. It reads no runtime data, credentials or private drafts. Keep the resulting snapshot aligned with the deployed product before publishing this client.
