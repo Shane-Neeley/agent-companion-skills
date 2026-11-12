@@ -1,8 +1,6 @@
 # Changelog
 
 ## Unreleased
-
-- BoomScrolling’s CLI now covers the shared workspace, writer and account tools, with full exports, verified image downloads and explicit optional permissions. Its terminal welcome turns DOOM into BOOM with your line about time well spent.
 - Start with your own agent, try the offline example, then connect your writing feed. The CLI now has a help screen, and the setup guides put the first useful steps up front.
 
 - BoomScrolling writer packets can retain original author photos, source handles, dates and media previews through the same SDK and CLI.
@@ -12,6 +10,11 @@
 - Added a small open-source client and an offline example for using permitted BoomScrolling and Kit tools from an already-connected agent. The local drafting skills still work without an account.
 
 ## November 11, 2026
+
+### The full BoomScrolling CLI
+
+- BoomScrolling’s CLI now covers the shared workspace, writer and account tools, with full exports, verified image downloads and explicit optional permissions. Its terminal welcome turns DOOM into BOOM with your line about time well spent.
+
 
 ### Customer agent login
 
