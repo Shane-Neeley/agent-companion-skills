@@ -1,0 +1,20 @@
+{
+  "name": "fort-rock-media",
+  "interface": {
+    "displayName": "Fort Rock Media"
+  },
+  "plugins": [
+    {
+      "name": "boomscrolling-writer",
+      "source": {
+        "source": "local",
+        "path": "./plugins/boomscrolling-writer"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "boomscrolling": {
+      "type": "http",
+      "url": "https://boomscrolling.fortrockmedia.com/agent/mcp"
+    }
+  }
+}

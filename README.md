@@ -13,6 +13,16 @@ View the verified skills.sh detail pages: [Check your first agent job](https://s
 
 The separate [open-source agent client and CLI](clients/frm/README.md) connect your product account from Claude or your own agent using customer OAuth. They are optional developer tools, not part of either local skill.
 
+The [BoomScrolling Writer plugin](plugins/boomscrolling-writer/README.md) connects an existing Codex, Claude, ChatGPT or other MCP agent to its private generated feed. It uses the host's existing reasoning and tools, reads writing feedback and sends supplied drafts for review. Account access is required; it never approves or publishes. The two disconnected skills above remain usable on their own.
+
+In Claude Code, install from the publisher's repository marketplace:
+
+```text
+/plugin install boomscrolling-writer --marketplace Shane-Neeley/agent-companion-skills
+```
+
+This catalog is separate from a curated public directory listing. See the plugin's instructions for Codex, ChatGPT, OpenCode, SDK and CLI setup.
+
 ## Install one skill
 
 Use an agent that supports `SKILL.md` and can read and write files in your chosen project. The optional duplicate checker needs Python 3.9 or later. The installer needs Node.js; check the [current CLI prerequisites](https://github.com/vercel-labs/skills#install-a-skill).

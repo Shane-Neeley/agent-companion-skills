@@ -1,0 +1,18 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "boomscrolling": {
+      "type": "streamable-http",
+      "url": "https://boomscrolling.fortrockmedia.com/agent/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {"mode": "dcr"},
+            "baseScopes": ["boom.workspace.read", "boom.drafts.write", "boom.writer.read", "boom.writer.write"]
+          }
+        }
+      }
+    }
+  }
+}

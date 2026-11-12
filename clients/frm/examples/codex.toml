@@ -1,0 +1,5 @@
+[mcp_servers.boomscrolling]
+url = "https://boomscrolling.fortrockmedia.com/agent/mcp"
+
+# Run: codex mcp login boomscrolling --scopes boom.workspace.read,boom.drafts.write,boom.writer.read,boom.writer.write
+# Credentials belong to Codex's protected store, never this file.

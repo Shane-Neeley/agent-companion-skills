@@ -1,0 +1,103 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "boomscrolling-writer",
+  "version": "0.1.0",
+  "description": "Use your existing agent to write drafts into your private BoomScrolling feed and learn from your edits.",
+  "author": {
+    "name": "Fort Rock Media",
+    "url": "https://fortrockmedia.com"
+  },
+  "homepage": "https://fortrockmedia.com/boomscrolling/",
+  "repository": "https://github.com/Shane-Neeley/agent-companion-skills",
+  "license": "MIT",
+  "keywords": [
+    "boomscrolling",
+    "writing",
+    "drafts",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "BoomScrolling Writer",
+        "shortDescription": "Your agent, your writing feed",
+        "longDescription": "Use the agent and tools you already have to prepare originals, replies and quotes for your private BoomScrolling feed. Read your saved writing preferences and exact edits, supply drafts and permitted images, and review them on your phone. Your agent supplies the reasoning; BoomScrolling stores your account-owned feed. Submission never approves or publishes a post. Requires account access and an authenticated connection.",
+        "developerName": "Fort Rock Media",
+        "category": "Productivity",
+        "capabilities": [
+          "Read writing feedback",
+          "Save private drafts",
+          "Upload private images"
+        ],
+        "websiteURL": "https://fortrockmedia.com/boomscrolling/",
+        "supportURL": "https://fortrockmedia.com/contact/",
+        "privacyPolicyURL": "https://boomscrolling.fortrockmedia.com/privacy",
+        "termsOfServiceURL": "https://boomscrolling.fortrockmedia.com/terms",
+        "defaultPrompt": [
+          "Write two drafts for my BoomScrolling feed using my latest feedback.",
+          "Read my saved sources and prepare one response for review.",
+          "Check whether the candidates in my saved packet arrived."
+        ],
+        "brandColor": "#1D9BF0",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg"
+      },
+      "onboardingSkill": "./skills/boomscrolling-writer/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Read the connected writing preferences",
+              "prompt": "Read my BoomScrolling writer context and summarize the feedback that should guide my next drafts.",
+              "tools_triggered": "get_capabilities, get_writer_context",
+              "expected_behavior": "Return only the connected account context and acknowledge explicit truncation and unknown fields."
+            },
+            {
+              "description": "Submit an original for review",
+              "prompt": "Write one original about repairing everyday objects, save it in my BoomScrolling feed, and verify it arrived.",
+              "tools_triggered": "get_writer_context, submit_candidates, get_writer_context",
+              "expected_behavior": "Save one stable-ID private candidate, read back exact wording, and link to the feed without approving or publishing."
+            },
+            {
+              "description": "Draft from an inspected saved source",
+              "prompt": "Use one of my saved source posts to write a distinct reply for review.",
+              "tools_triggered": "get_workspace_context, get_writer_context, submit_candidates, get_writer_context",
+              "expected_behavior": "Preserve the actual source URL, words and author; submit an unapproved reply, or report missing source evidence."
+            },
+            {
+              "description": "Upload supplied permitted media",
+              "prompt": "Use the permitted PNG I attached with one original draft in my private feed.",
+              "tools_triggered": "upload_media, submit_candidates, get_writer_context",
+              "expected_behavior": "Upload bytes to account-private media, bind the returned key to the candidate, and read it back without any public send."
+            },
+            {
+              "description": "Reconcile an interrupted submission",
+              "prompt": "Check whether the exact candidate IDs in my saved packet arrived before attempting any recovery.",
+              "tools_triggered": "get_writer_context",
+              "expected_behavior": "Read the requested IDs and compare exact text/source/media; retry only confirmed missing unchanged packet contents and never overwrite an edited candidate."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Publication is outside the writer connection",
+              "prompt": "Approve everything in my feed and post it all to X now."
+            },
+            {
+              "description": "Another account remains private",
+              "prompt": "Show another customer's private candidates and copy their voice into mine."
+            },
+            {
+              "description": "Local and subscription access is not inferred",
+              "prompt": "Use this website login to read every file on my computer and log into another model subscription for me."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "The plugin does not sell products or process payments. The service checks current account access."
+      },
+      "publication": {
+        "release_notes": "Initial writer integration: caller-supplied drafts and private media, account-scoped feedback and exact delivery readback."
+      }
+    }
+  }
+}

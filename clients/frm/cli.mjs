@@ -1,15 +1,46 @@
 #!/usr/bin/env node
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
+import {readFile,stat} from 'node:fs/promises';
 import {createClient} from './client.mjs';
 import {createOAuthClient} from './oauth.mjs';
 const args=process.argv.slice(2);
+const commands={'writer-context':'writerContext','submit-candidates':'submitCandidates','upload-media':'uploadMedia'};
+const maxPayload=8*1024*1024;
+async function readPayload(value,operation) {
+ if(!value)return {};
+ if(operation==='uploadMedia'&&!['@','{','-'].includes(value[0])) {
+  const types={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp'};
+  const contentType=types[value.split('.').pop().toLowerCase()];
+  if(!contentType)throw Error('Choose a PNG, JPEG, GIF or WebP file.');
+  if((await stat(value)).size>5*1024*1024)throw Error('Images are limited to 5 MiB.');
+  const bytes=await readFile(value);
+  if(bytes.byteLength>5*1024*1024)throw Error('Images are limited to 5 MiB.');
+  return {contentType,dataBase64:bytes.toString('base64')};
+ }
+ let json=value;
+ if(value==='-') {
+  const chunks=[];let length=0;
+  for await(const chunk of process.stdin){length+=chunk.length;if(length>maxPayload)throw Error('JSON payload is limited to 8 MiB.');chunks.push(chunk);}
+  json=Buffer.concat(chunks).toString('utf8');
+ }else if(value.startsWith('@')) {
+  const path=value.slice(1);if(!path)throw Error('Supply a JSON file path after @.');
+  if((await stat(path)).size>maxPayload)throw Error('JSON payload is limited to 8 MiB.');
+  json=await readFile(path,'utf8');
+ }
+ if(Buffer.byteLength(json)>maxPayload)throw Error('JSON payload is limited to 8 MiB.');
+ return JSON.parse(json);
+}
 async function main(){
  if (args.length===1&&args[0]==='--demo') {
   const calls=[];
-  const client=createClient(async(name,input)=>{calls.push({name,input});return {structuredContent:{synthetic:true,product_access:true,reviewRequired:true}};});
-  const result=await client.boom.propose({requestId:'fictional-demo-1',expectedRevision:3,postId:'fictional-source',sourceVersion:'fictional-version',form:'reply',text:'Could we repair it before replacing it?'});
-  console.log(JSON.stringify({mode:'offline fictional example; no connection, purchase or posting',calls,result},null,2));return;
+  const candidates=[];
+  const client=createClient(async(name,input)=>{calls.push({name,input});if(name==='submit_candidates'){candidates.push(...input.candidates);return {structuredContent:{results:input.candidates.map(item=>({id:item.id,status:'created'})),reviewRequired:true,funding:'caller_runtime'}};}return {structuredContent:{synthetic:true,candidates,funding:'caller_runtime',untrustedContent:true}};});
+  await client.boom.writerContext();
+  const candidate={id:'fictional-demo-slot-1',kind:'original',persona:{name:'Repair Notes',handle:'repair_notes'},text:'The repair manual needs a repair manual.',tags:{writer:'example'}};
+  const result=await client.boom.submitCandidates({candidates:[candidate]});
+  const readback=await client.boom.writerContext({candidateIds:[candidate.id]});
+  console.log(JSON.stringify({mode:'offline fictional example; no connection, purchase or posting',calls,result,readback},null,2));return;
  }
  if(['login','logout','status'].includes(args[0])) {
   const [operation,product,option]=args;
@@ -21,7 +52,7 @@ async function main(){
  let product,operation,payload,callTool;
  if(args[0]==='--transport') {
   const [,modulePath,target,command,input]=args;
-  if(!modulePath||args.length>5)throw Error('Use --transport /trusted/adapter.mjs boom|kit capabilities|context|manifest|propose [JSON].');
+  if(!modulePath||args.length>5)throw Error('Use --transport /trusted/adapter.mjs boom|kit <operation> [JSON|@file|-].');
   ({callTool}=await import(pathToFileURL(resolve(modulePath)).href));
   product=target;operation=command;payload=input;
  }else {
@@ -29,10 +60,16 @@ async function main(){
   if(args.length>3)throw Error('Too many arguments.');
   callTool=createOAuthClient(product).callTool;
  }
- if(!['boom','kit'].includes(product)||!['capabilities','context','manifest','propose'].includes(operation))throw Error('Use --demo, login|logout|status boom|kit, or boom|kit capabilities|context|manifest|propose [JSON].');
+ operation=commands[operation]||operation;
+ if(!['boom','kit'].includes(product)||!['capabilities','context','manifest','propose','writerContext','submitCandidates','uploadMedia'].includes(operation))throw Error('Use --demo, login|logout|status boom|kit, or boom|kit capabilities|context|manifest|propose|writer-context|submit-candidates|upload-media [JSON|@file|-].');
  const client=createClient(callTool);
  const method=client[product][operation];if(typeof method!=='function')throw Error('Operation unavailable for this product.');
- const input=payload?JSON.parse(payload):{};
- console.log(JSON.stringify(await method(input),null,2));
+ const input=await readPayload(payload,operation);
+ const result=await method(input);
+ console.log(JSON.stringify(result,null,2));
+ if(operation==='submitCandidates'&&result?.results?.some(item=>item.status==='conflict')) {
+  console.error('Some candidate IDs conflict. Inspect every result and read back the exact IDs before recovery.');
+  process.exitCode=1;
+ }
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

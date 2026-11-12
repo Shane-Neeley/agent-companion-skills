@@ -1,0 +1,11 @@
+{
+  "candidates": [
+    {
+      "id": "fictional-repair-example-1",
+      "kind": "original",
+      "persona": {"name": "Repair Notes", "handle": "repair_notes"},
+      "text": "The repair manual needs a repair manual.",
+      "tags": {"writer": "example", "topic": "repairs"}
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import {homedir} from 'node:os';
 import {join, resolve} from 'node:path';
 
 export const PRODUCTS=Object.freeze({
-  boom:Object.freeze({origin:'https://boomscrolling.fortrockmedia.com',scopes:['boom.workspace.read','boom.drafts.write']}),
+  boom:Object.freeze({origin:'https://boomscrolling.fortrockmedia.com',scopes:['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write']}),
   kit:Object.freeze({origin:'https://fortrockmedia.com',scopes:['kit.workspace.read','kit.workspace.export']}),
 });
 const VERSION='2026-07-28';
@@ -188,8 +188,8 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
     });
   }
   async function callTool(name,args={}) {
-    const scope=name==='propose_draft'?'boom.drafts.write':name==='kit_get_export_manifest'?'kit.workspace.export':product==='boom'?'boom.workspace.read':'kit.workspace.read';
-    const allowed=product==='boom'?['get_capabilities','get_workspace_context','propose_draft']:['kit_get_capabilities','kit_get_workspace_context','kit_get_export_manifest'];
+    const scope=name==='propose_draft'?'boom.drafts.write':name==='get_writer_context'?'boom.writer.read':['submit_candidates','upload_media'].includes(name)?'boom.writer.write':name==='kit_get_export_manifest'?'kit.workspace.export':product==='boom'?'boom.workspace.read':'kit.workspace.read';
+    const allowed=product==='boom'?['get_capabilities','get_workspace_context','propose_draft','get_writer_context','submit_candidates','upload_media']:['kit_get_capabilities','kit_get_workspace_context','kit_get_export_manifest'];
     if(!allowed.includes(name))fail('Tool is unavailable for this product.');
     return authorized(scope,async value=>{
       const clientInfo={name:'fort-rock-media-client',version:'1.0.0'};

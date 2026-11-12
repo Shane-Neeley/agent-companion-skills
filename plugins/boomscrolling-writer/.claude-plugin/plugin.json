@@ -1,0 +1,15 @@
+{
+  "name": "boomscrolling-writer",
+  "version": "0.1.0",
+  "description": "Use your existing agent to write drafts into your private BoomScrolling feed and learn from your edits.",
+  "author": {"name": "Fort Rock Media", "url": "https://fortrockmedia.com"},
+  "homepage": "https://fortrockmedia.com/boomscrolling/",
+  "repository": "https://github.com/Shane-Neeley/agent-companion-skills",
+  "license": "MIT",
+  "keywords": ["boomscrolling", "writing", "drafts", "mcp"],
+  "icon": "./assets/icon.svg",
+  "documentationUrl": "https://github.com/Shane-Neeley/agent-companion-skills/tree/main/clients/frm",
+  "supportUrl": "https://fortrockmedia.com/contact/",
+  "privacyPolicyUrl": "https://boomscrolling.fortrockmedia.com/privacy",
+  "termsOfServiceUrl": "https://boomscrolling.fortrockmedia.com/terms"
+}

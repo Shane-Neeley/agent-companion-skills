@@ -15,7 +15,8 @@ export function createClient(callTool) {
     return data===undefined?result:data;
   }
   return Object.freeze({
-    boom:Object.freeze({capabilities:()=>call('get_capabilities'),context:(args={})=>call('get_workspace_context',args),propose:args=>call('propose_draft',args)}),
+    boom:Object.freeze({capabilities:()=>call('get_capabilities'),context:(args={})=>call('get_workspace_context',args),propose:args=>call('propose_draft',args),
+      writerContext:(args={})=>call('get_writer_context',args),submitCandidates:args=>call('submit_candidates',args),uploadMedia:args=>call('upload_media',args)}),
     kit:Object.freeze({capabilities:()=>call('kit_get_capabilities'),context:()=>call('kit_get_workspace_context'),manifest:()=>call('kit_get_export_manifest')}),
   });
 }

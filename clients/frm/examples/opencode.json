@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "boomscrolling": {
+        "type": "remote",
+        "url": "https://boomscrolling.fortrockmedia.com/agent/mcp",
+        "oauth": {"scope": "boom.workspace.read boom.drafts.write boom.writer.read boom.writer.write"}
+      }
+    }
+  }
+}

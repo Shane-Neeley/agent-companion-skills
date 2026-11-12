@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Your existing agent can supply originals, replies, quotes and images to your private BoomScrolling feed, then read your feedback and exact edits. Includes a writer plugin, setup examples, SDK and CLI; directory review remains separate.
 
 - Added a small open-source client and an offline example for using permitted BoomScrolling and Kit tools from an already-connected agent. The local drafting skills still work without an account.
 

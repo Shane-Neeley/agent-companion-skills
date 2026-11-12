@@ -76,7 +76,7 @@ test('browser PKCE login, owner-only persistence, scoped MCP call, rotating refr
   const f=await fixture(t);
   assert.deepEqual(await f.connection.status(),{connected:false,product:'boom'});
   const login=await f.connection.login({onAuthorization:url=>f.authorize(url,{wrongStateFirst:true})});
-  assert.equal(login.connected,true);assert.deepEqual(login.scopes,['boom.workspace.read','boom.drafts.write']);
+  assert.equal(login.connected,true);assert.deepEqual(login.scopes,['boom.workspace.read','boom.drafts.write','boom.writer.read','boom.writer.write']);
   assert.equal(f.registrations[0].token_endpoint_auth_method,'none');
   if(process.platform!=='win32'){
     assert.equal((await stat(f.store.directory)).mode&0o777,0o700);
@@ -97,6 +97,7 @@ test('read-only login refuses draft calls before network and prevents overwritin
   const f=await fixture(t);
   await f.connection.login({readOnly:true,onAuthorization:f.authorize});
   await assert.rejects(f.connection.callTool('propose_draft',{}),/granted scopes/);
+  for(const name of ['get_writer_context','submit_candidates','upload_media'])await assert.rejects(f.connection.callTool(name,{}),/granted scopes/);
   await assert.rejects(f.connection.callTool('kit_get_workspace_context'),/unavailable/);
   assert.equal(f.calls.some(call=>call.path==='/agent/mcp'),false);
   await assert.rejects(f.connection.login({onAuthorization:f.authorize}),/Already connected/);
@@ -107,6 +108,15 @@ test('explicit legacy HTTP mode initializes before exactly one tool call',async 
   const legacy=createOAuthClient('boom',{store:f.store,origin:f.origin,protocolVersion:'2025-11-25'});
   assert.equal((await createClient(legacy.callTool).boom.context()).synthetic,true);
   assert.deepEqual(f.calls.filter(call=>call.path==='/agent/mcp').map(call=>JSON.parse(call.body).method),['initialize','notifications/initialized','tools/call']);
+});
+test('writer-scoped login sends each supplied operation once and an old source-only grant cannot read feedback',async t=>{
+ const f=await fixture(t);await f.connection.login({onAuthorization:f.authorize});
+ for(const name of ['get_writer_context','submit_candidates','upload_media'])await f.connection.callTool(name,{fixture:true});
+ assert.deepEqual(f.calls.filter(item=>item.path==='/agent/mcp').map(item=>JSON.parse(item.body).params.name),['get_writer_context','submit_candidates','upload_media']);
+ const saved=await f.store.read('boom');await f.store.write('boom',{...saved,scopes:['boom.workspace.read','boom.drafts.write']});
+ const before=f.calls.length;
+ for(const name of ['get_writer_context','submit_candidates','upload_media'])await assert.rejects(f.connection.callTool(name,{}),/granted scopes/);
+ assert.equal(f.calls.length,before);
 });
 
 test('untrusted discovery issuer fails before registration',async t=>{
