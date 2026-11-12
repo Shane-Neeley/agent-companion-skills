@@ -134,3 +134,16 @@ test('offline schema lookup accepts operation IDs, CLI commands, SDK methods and
  assert.equal(unknown.status,1);assert.equal(unknown.stdout,'');assert.match(unknown.stderr,/Unknown operation/);
  await assert.rejects(fileStat(credentials),error=>error.code==='ENOENT');
 });
+
+test('argument mistakes print one plain line and product help needs no connection',()=>{
+ const missing=spawnSync(process.execPath,[cli,'boom','commands','--output'],{encoding:'utf8'});
+ assert.equal(missing.status,1);assert.equal(missing.stdout,'');assert.equal(missing.stderr.trim(),'Supply exactly one file path after --output.');
+ const empty=spawnSync(process.execPath,[cli,'--json','boom','compose','-'],{input:'',encoding:'utf8'});
+ assert.equal(empty.status,1);assert.match(empty.stderr,/JSON input was empty/);
+ const invalid=spawnSync(process.execPath,[cli,'--json','boom','compose','{text:1}'],{encoding:'utf8'});
+ assert.equal(invalid.status,1);assert.match(invalid.stderr,/not valid JSON/);assert.doesNotMatch(invalid.stderr,/\n\s+at /);
+ for(const product of ['boom','kit'])for(const flag of ['--help','-h','help']){
+  const help=spawnSync(process.execPath,[cli,product,flag],{encoding:'utf8'});
+  assert.equal(help.status,0,help.stderr);assert.match(help.stdout,/Commands:/);
+ }
+});

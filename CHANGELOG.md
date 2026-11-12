@@ -5,6 +5,9 @@
 - Schema help accepts the same command names you use in the CLI, including post, post-status and connect-x.
 
 - Tell your connected agent to tweet exact supplied text now, or use the CLI’s explicit post command. It checks the connected account and posting readiness, keeps a stable request record, and looks up uncertain outcomes without another send. Draft drops and unattended writing stay separate.
+
+- Pressing Ctrl-C during browser sign-in no longer blocks later commands. Mistyped CLI arguments and empty or invalid JSON get a one-line explanation, `boom --help` works, and image downloads decode faster.
+
 - Start with your own agent, try the offline example, then connect your writing feed. The CLI now has a help screen, and the setup guides put the first useful steps up front.
 
 - BoomScrolling writer packets can retain original author photos, source handles, dates and media previews through the same SDK and CLI.

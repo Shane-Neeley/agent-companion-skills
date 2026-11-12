@@ -9,7 +9,7 @@ export class CredentialStore {
  read(product:Product):Promise<StoredCredential|null>;
  write(product:Product,value:StoredCredential):Promise<void>;
  remove(product:Product):Promise<void>;
- locked<T>(product:Product,operation:()=>Promise<T>):Promise<T>;
+ locked<T>(product:Product,operation:()=>Promise<T>,options?:{releaseOnInterrupt?:boolean}):Promise<T>;
 }
 export interface ConnectionStatus {connected:boolean;product:Product;scopes?:string[];expiresAt?:string;revoked?:boolean;}
 /** origin and timeoutMs are for controlled integration fixtures. CLI targets are fixed. */

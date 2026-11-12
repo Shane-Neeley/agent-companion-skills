@@ -10,15 +10,16 @@ import {BOOM_TAGLINE,boomMasthead,terminalBrand} from './terminal.mjs';
 import {composeLink,shareLink,profileLink,writingContext,takeCard} from './helpers.mjs';
 import {parsePostArguments,postStatusArguments,validatePostArguments,publicationExit,connectXArguments} from './post.mjs';
 const rawArgs=process.argv.slice(2),args=[];
-let jsonOnly=false,useRest=false,output;
+let jsonOnly=false,useRest=false,output,argumentError;
+// Reported from main so a mistyped flag prints one line instead of a stack trace.
 // Post text is a literal argument, even when it happens to equal a global flag.
 const valueFlags=new Set(['--text','--text-file','--account','--request-id','--scopes','--transport']);
 for(let index=0;index<rawArgs.length;index++) {
  const flag=rawArgs[index];
  if(valueFlags.has(flag)){args.push(flag);if(index+1<rawArgs.length)args.push(rawArgs[++index]);continue;}
- if(flag==='--json'){if(jsonOnly)throw Error('Do not repeat --json.');jsonOnly=true;continue;}
- if(flag==='--rest'){if(useRest)throw Error('Do not repeat --rest.');useRest=true;continue;}
- if(flag==='--output'){if(output!==undefined||index+1>=rawArgs.length)throw Error('Supply exactly one file path after --output.');output=rawArgs[++index];continue;}
+ if(flag==='--json'){if(jsonOnly)argumentError??='Do not repeat --json.';jsonOnly=true;continue;}
+ if(flag==='--rest'){if(useRest)argumentError??='Do not repeat --rest.';useRest=true;continue;}
+ if(flag==='--output'){if(output!==undefined||index+1>=rawArgs.length){argumentError??='Supply exactly one file path after --output.';index++;continue;}output=rawArgs[++index];continue;}
  args.push(flag);
 }
 const maxPayload=8*1024*1024,maxExport=16*1024*1024;
@@ -104,7 +105,7 @@ async function readPayload(value,operation) {
   json=await readFile(path,'utf8');
  }
  if(Buffer.byteLength(json)>maxPayload)throw Error('JSON payload is limited to 8 MiB.');
- return JSON.parse(json);
+ try{return JSON.parse(json);}catch{throw Error(json.trim()?'The JSON argument is not valid JSON. Check quoting, or pass @FILE or - for stdin.':'The JSON input was empty. Pass a JSON object, @FILE or - with data on stdin.');}
 }
 async function save(bytes,path,contentType) {
  const file=await open(path,'wx',0o600);
@@ -134,7 +135,8 @@ async function exportFile(method,input,operation) {
  return Buffer.from(JSON.stringify({format:'boom-cli-export-v1',operation,complete:!input.cursor,allCollections:!input.collection,snapshot:JSON.parse(snapshot),exports},null,2)+'\n');
 }
 async function main(){
- if(!args.length||args.length===1&&['--help','-h','help','boom'].includes(args[0])) {
+ if(argumentError)throw Error(argumentError);
+ if(!args.length||args.length===1&&['--help','-h','help','boom'].includes(args[0])||args.length===2&&['boom','kit'].includes(args[0])&&['--help','-h','help'].includes(args[1])) {
   if(output)throw Error('--output is available for explicit download/export commands.');
   console.log(jsonOnly?JSON.stringify({name:'FRM agent client',tagline:BOOM_TAGLINE,help},null,2):boomMasthead({color:!!process.stdout.isTTY&&!Object.hasOwn(process.env,'NO_COLOR')})+'\n\n'+help);return;
  }

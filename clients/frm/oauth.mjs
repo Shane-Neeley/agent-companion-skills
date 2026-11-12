@@ -2,7 +2,7 @@ import {BOOM_OPERATIONS,BOOM_OPERATION_SCOPES} from './operations.mjs';
 // Product OAuth only. This module never handles an agent provider's credentials.
 import {createServer} from 'node:http';
 import {randomBytes, createHash, timingSafeEqual} from 'node:crypto';
-import {constants} from 'node:fs';
+import {constants, unlinkSync} from 'node:fs';
 import {open, mkdir, lstat, rename, unlink} from 'node:fs/promises';
 import {homedir} from 'node:os';
 import {join, resolve} from 'node:path';
@@ -77,11 +77,18 @@ export class CredentialStore {
     finally{await file.close().catch(()=>{});await unlink(temp).catch(error=>{if(error.code!=='ENOENT')throw error;});}
   }
   async remove(product) {await unlink(this.path(product)).catch(error=>{if(error.code!=='ENOENT')throw error;});}
-  async locked(product,operation) {
+  async locked(product,operation,{releaseOnInterrupt=false}={}) {
     await this.prepare();const path=this.path(product)+'.lock';let file;
     // No lock stealing or automatic grant retries: another process may be rotating tokens.
     try{file=await open(path,'wx',0o600);}catch(error){if(error.code==='EEXIST')fail('Another FRM command is active. Wait for it to finish; if it crashed, remove the .lock file from your private FRM config directory.');throw error;}
-    try{return await operation();}finally{await file.close();await unlink(path);}
+    // Ctrl-C while waiting for the browser used to strand this lock and block
+    // every later command. Sign-in stores nothing until it completes, so only
+    // that wait releases its own lock; token rotations keep the manual check.
+    const signals=releaseOnInterrupt?['SIGINT','SIGTERM','SIGHUP']:[];
+    let released=false;
+    const interrupted=signal=>{released=true;try{unlinkSync(path);}catch{}for(const name of signals)process.removeListener(name,interrupted);process.kill(process.pid,signal);};
+    for(const name of signals)process.on(name,interrupted);
+    try{return await operation();}finally{for(const name of signals)process.removeListener(name,interrupted);await file.close();await unlink(path).catch(error=>{if(!released||error.code!=='ENOENT')throw error;});}
   }
 }
 
@@ -136,7 +143,7 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
         await store.write(product,{version:1,issuer:origin,resource,clientId:registration.client_id,...tokens});
         return {connected:true,product,scopes:tokens.scopes};
       }finally{clearTimeout(timer);server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
-    });
+    },{releaseOnInterrupt:true});
   }
   async function status() {
     return store.locked(product,async()=>{const saved=await store.read(product);if(!saved)return {connected:false,product};const value=credential(saved);return {connected:true,product,scopes:value.scopes,expiresAt:new Date(value.expiresAt).toISOString()};});

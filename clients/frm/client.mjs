@@ -45,7 +45,8 @@ export function createClient(callTool,{listTools,requestOperation}={}) {
       const chunk=await boomCall('download_media',{key,offset,limit:262144});
       if(!chunk||chunk.key!==key||chunk.offset!==offset||!Number.isSafeInteger(chunk.totalBytes)||chunk.totalBytes<1||chunk.totalBytes>maxBytes||!Number.isSafeInteger(chunk.bytes)||chunk.bytes<1||chunk.bytes>262144||typeof chunk.dataBase64!=='string'||chunk.dataBase64.length!==Math.ceil(chunk.bytes/3)*4||typeof chunk.sha256!=='string'||!/^[a-f0-9]{64}$/.test(chunk.sha256)||!['image/png','image/jpeg','image/gif','image/webp'].includes(chunk.contentType))throw Error('Invalid media download chunk.');
       let binary;try{binary=atob(chunk.dataBase64);}catch{throw Error('Invalid media base64.');}
-      const bytes=Uint8Array.from(binary,character=>character.charCodeAt(0));
+      // A plain loop decodes each chunk far faster than a per-character callback.
+      const bytes=new Uint8Array(binary.length);for(let index=0;index<binary.length;index++)bytes[index]=binary.charCodeAt(index);
       if(btoa(binary)!==chunk.dataBase64||bytes.length!==chunk.bytes||offset+chunk.bytes>chunk.totalBytes)throw Error('Media download bytes differ from the chunk manifest.');
       if(offset===0){totalBytes=chunk.totalBytes;sha256=chunk.sha256;contentType=chunk.contentType;}
       if(totalBytes!==chunk.totalBytes||sha256!==chunk.sha256||contentType!==chunk.contentType)throw Error('Media changed during download.');

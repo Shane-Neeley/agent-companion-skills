@@ -312,3 +312,20 @@ test('spawned REST post and status keep the stable publication key separate from
  const lookup=await spawnedCLI(['--rest','--transport',adapter,'boom','post-status','stable-rest-key']);assert.equal(lookup.status,0,lookup.stderr);assert.equal(JSON.parse(lookup.stdout).requestId,'stable-rest-key');
  assert.equal(f.calls.filter(call=>call.path==='/api/v1/publication/posts').length,1);assert.equal(f.calls.filter(call=>call.path==='/api/v1/publication/requests/get').length,1);assert.equal(f.calls.filter(call=>call.path==='/agent/mcp').length,0);
 });
+
+test('interrupting browser sign-in releases its lock for the next command',{skip:process.platform==='win32'},async t=>{
+  const f=await fixture(t);
+  const script=`import {CredentialStore,createOAuthClient} from ${JSON.stringify(new URL('./oauth.mjs',import.meta.url).href)};
+const connection=createOAuthClient('boom',{store:new CredentialStore(process.argv[1]),origin:process.argv[2]});
+if(!process.argv[2])throw Error('The fixture origin is required.');
+connection.login({onAuthorization:()=>console.log('waiting')}).catch(error=>{console.error(error.message);process.exitCode=1;});`;
+  const child=spawn(process.execPath,['--input-type=module','-e',script,f.store.directory,f.origin],{stdio:['ignore','pipe','inherit']});
+  t.after(()=>{child.kill('SIGKILL');});
+  await new Promise((resolve,reject)=>{child.stdout.once('data',resolve);child.once('exit',()=>reject(Error('Sign-in ended before waiting.')));});
+  assert.deepEqual(await readdir(f.store.directory),['boom.json.lock']);
+  const ended=new Promise(resolve=>child.once('exit',(code,signal)=>resolve(signal)));
+  child.kill('SIGINT');
+  assert.equal(await ended,'SIGINT');
+  assert.deepEqual(await readdir(f.store.directory),[]);
+  assert.deepEqual(await f.connection.status(),{connected:false,product:'boom'});
+});
