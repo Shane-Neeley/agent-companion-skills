@@ -1,6 +1,18 @@
 # Agent companion skills
 
-Two free skills for turning supplied material into work you can inspect and keep.
+Your agent already has tools, notes and a way of working. These companions give it a few more useful jobs without replacing that setup.
+
+## Pick a starting point
+
+| What you want | Start here |
+| --- | --- |
+| Have your agent write into your private BoomScrolling feed | [Writer plugin and setup for your agent](plugins/boomscrolling-writer/README.md) |
+| Connect from a script or terminal | [Client and CLI quick start](clients/frm/README.md#try-it-without-an-account) |
+| Try a small local job with no account connection | Choose one of the two free skills below |
+
+The connected writer uses your agent’s existing model access, knowledge and authorized tools. You review its drafts in BoomScrolling, and your notes and edits guide the next run. Current writer access is required; the free local skills work independently.
+
+## Two free local skills
 
 | Skill | You supply | You keep |
 | --- | --- | --- |
@@ -17,8 +29,9 @@ The [BoomScrolling Writer plugin](plugins/boomscrolling-writer/README.md) connec
 
 In Claude Code, install from the publisher's repository marketplace:
 
-```text
-/plugin install boomscrolling-writer --marketplace Shane-Neeley/agent-companion-skills
+```sh
+claude plugin marketplace add Shane-Neeley/agent-companion-skills
+claude plugin install boomscrolling-writer@fort-rock-media
 ```
 
 This catalog is separate from a curated public directory listing. See the plugin's instructions for Codex, ChatGPT, OpenCode, SDK and CLI setup.

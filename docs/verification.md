@@ -8,3 +8,5 @@ This file links actual dated checks; it does not treat the acceptance checklist 
 - [Inspected synthetic worked examples](worked-examples.md)
 
 No external participant or customer outcome has been measured. Local synthetic exercises and lexical checks cannot establish native skill selection, reliable behavior across agents, demand, conversion or search-ranking benefit.
+
+- [BYOC setup and CLI help](2026-11-11-byoc-docs-verification.md): help, clear first-run instructions,30 Node and8 Python checks.

@@ -7,6 +7,16 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
 const cli=fileURLToPath(new URL('./cli.mjs',import.meta.url));
+test('help and an empty command explain the writer path without touching credentials',()=>{
+ for(const args of [[],['--help'],['-h'],['help']]) {
+  const result=spawnSync(process.execPath,[cli,...args],{encoding:'utf8',env:{...process.env,FRM_CONFIG_DIR:'/a/nonexistent/help-must-not-write-here'}});
+  assert.equal(result.status,0,result.stderr);
+  assert.match(result.stdout,/fictional offline writer loop/);
+  assert.match(result.stdout,/submit-candidates @FILE/);
+  assert.match(result.stdout,/never generates, approves or publishes/);
+  assert.equal(result.stderr,'');
+ }
+});
 test('CLI reads saved packets, stdin and image files without putting bytes in command arguments',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'frm-cli-fixture-'));
  t.after(()=>rm(directory,{recursive:true,force:true}));

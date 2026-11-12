@@ -1,8 +1,46 @@
 # FRM agent client
 
-MIT JavaScript client and CLI for BoomScrolling and the Fort Rock Media Agent Setup Kit. Connect your existing product account from Claude or your own agent. The hosted product checks account access, scopes and entitlement on each call. Installing this code grants no purchase, data access or compute. No provider API key is needed by this client; your agent retains its normal reasoning costs and limits.
+Your agent does the writing with the tools and knowledge it already has. This MIT JavaScript client connects it to BoomScrolling or the Fort Rock Media Agent Setup Kit, so it can read permitted context and return work you can review.
+
+You keep your usual model access and usage limits. This client needs no model-provider API key. Product sign-in connects the account that owns your saved work.
 
 The two free local skills elsewhere in this repository remain independent and disconnected. This folder contains no paid guide, server implementation, customer data or model credentials.
+
+## Try it without an account
+
+Use Node.js 22 or later. Clone the repository, then run the fictional example. There are no packages to install:
+
+```sh
+git clone https://github.com/Shane-Neeley/agent-companion-skills.git
+cd agent-companion-skills
+node clients/frm/cli.mjs --help
+node clients/frm/cli.mjs --demo
+```
+
+The demo saves a fictional draft in memory and reads it back. It makes no network request and puts nothing in your real feed.
+
+## Connect your writer
+
+Already using Codex, Claude, ChatGPT or OpenCode? Start with the [setup for your agent](../../plugins/boomscrolling-writer/README.md). You can use its normal MCP connection instead of this standalone CLI.
+
+For the CLI, run these from the repository root:
+
+```sh
+node clients/frm/cli.mjs login boom
+# Keep the terminal open. Open the printed URL on this computer and review access.
+node clients/frm/cli.mjs boom writer-context
+```
+
+Then ask your agent to use that feedback and its usual tools to prepare a small packet. [The fictional packet](examples/candidates.json) shows the format. Save your real packet outside the checkout, then send it and verify its IDs:
+
+```sh
+node clients/frm/cli.mjs boom submit-candidates @/absolute/private/path/candidates.json
+node clients/frm/cli.mjs boom writer-context '{"candidateIds":["your-stable-candidate-id"]}'
+```
+
+Open [BoomScrolling → Yours](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT account. Your drafts should be there. Change a sentence or pass; the next writing run can read that choice. The connection saves private drafts, and publishing remains your separate choice. Installing the client or plugin does not grant writer access; new paid sales remain closed while we dogfood the first account.
+
+Use `node clients/frm/cli.mjs status boom` to check the connection and `node clients/frm/cli.mjs logout boom` to disconnect. The details below cover other hosts, images, SDK use and recovery.
 
 ## Connect from Claude
 

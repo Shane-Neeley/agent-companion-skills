@@ -6,6 +6,16 @@ This plugin supplies one writing workflow and an authenticated remote MCP connec
 
 Requires a BoomScrolling account with current agent-writer access. The existing owner account is the first dogfood pilot. Paid sales and broader hosted availability are separate release decisions; installation alone grants no entitlement.
 
+## Start with the agent you use
+
+Choose [Claude Code](#claude-code), [Codex or ChatGPT](#codex-and-chatgpt), or [OpenCode and other hosts](#opencode-and-other-hosts) below. Prefer a terminal or your own scripts? The [CLI quick start](https://github.com/Shane-Neeley/agent-companion-skills/tree/main/clients/frm#try-it-without-an-account) includes a fictional offline demo.
+
+Connect one route, review its writing permissions, then ask:
+
+> Use my latest feedback to write two drafts for my BoomScrolling feed. Use my usual tools and verify that the drafts arrived.
+
+Open [Yours](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT account. Your drafts and future edits belong to that account. Keep using the tools your agent is already allowed to use; connecting the feed doesn't grant it new access to your computer.
+
 ## Claude Code
 
 ```sh

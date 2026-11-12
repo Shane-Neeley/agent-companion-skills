@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Start with your own agent, try the offline example, then connect your writing feed. The CLI now has a help screen, and the setup guides put the first useful steps up front.
 
 - Your existing agent can supply originals, replies, quotes and images to your private BoomScrolling feed, then read your feedback and exact edits. Includes a writer plugin, setup examples, SDK and CLI; directory review remains separate.
 

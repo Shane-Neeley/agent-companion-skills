@@ -7,6 +7,38 @@ import {createOAuthClient} from './oauth.mjs';
 const args=process.argv.slice(2);
 const commands={'writer-context':'writerContext','submit-candidates':'submitCandidates','upload-media':'uploadMedia'};
 const maxPayload=8*1024*1024;
+const help=`FRM agent client
+
+Your agent supplies the words. This client moves permitted context and drafts.
+
+Start here (Node.js 22+, no package installation):
+  node clients/frm/cli.mjs --demo
+  node clients/frm/cli.mjs login boom
+  node clients/frm/cli.mjs boom writer-context
+
+Commands:
+  --help, -h                      Show this help; no connection needed
+  --demo                          Try the fictional offline writer loop
+  login boom|kit [--read-only]     Connect your product account in a browser
+  status boom|kit                  Check the saved connection; never prints tokens
+  logout boom|kit                  Revoke and remove the saved connection
+  boom capabilities               Check your available operations
+  boom context [JSON]             Read saved source posts
+  boom writer-context [JSON]      Read your notes, feedback and exact draft IDs
+  boom submit-candidates @FILE     Save an agent-prepared JSON packet for review
+  boom submit-candidates -        Read that packet from stdin
+  boom upload-media IMAGE         Upload a permitted PNG/JPEG/GIF/WebP (max 5 MiB)
+  boom propose JSON               Save a source-bound, unapproved response
+  kit context                     Read your reviewed business workspace
+  kit manifest                    Get its export manifest (requires export permission)
+
+JSON arguments also accept @FILE or - for stdin. File paths can be absolute.
+Keep the terminal open during login; its browser must be on this computer.
+Use your existing agent and its normal model access to write the packet.
+Read back exact candidate IDs after saving; inspect every result for conflicts.
+Writer access is required. This client never generates, approves or publishes.
+Setup: https://github.com/Shane-Neeley/agent-companion-skills/tree/main/clients/frm
+`;
 async function readPayload(value,operation) {
  if(!value)return {};
  if(operation==='uploadMedia'&&!['@','{','-'].includes(value[0])) {
@@ -32,6 +64,9 @@ async function readPayload(value,operation) {
  return JSON.parse(json);
 }
 async function main(){
+ if(!args.length || args.length===1&&['--help','-h','help'].includes(args[0])) {
+  console.log(help);return;
+ }
  if (args.length===1&&args[0]==='--demo') {
   const calls=[];
   const candidates=[];
