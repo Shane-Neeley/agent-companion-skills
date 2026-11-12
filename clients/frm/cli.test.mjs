@@ -116,3 +116,21 @@ test('post-status reads an uncertain attempt without sending and reports a nonze
  const child=spawnSync(process.execPath,[cli,'--transport',adapter,'boom','post-status','stable-post'],{encoding:'utf8'});assert.equal(child.status,2);assert.equal(JSON.parse(child.stdout).status,'uncertain');assert.match(child.stderr,/do not submit a new send/);
  const sent=(await readFile(calls,'utf8')).trim().split('\n').map(line=>JSON.parse(line));assert.deepEqual(sent,[{name:'get_publication_request',args:{requestId:'stable-post'}}]);
 });
+
+test('offline schema lookup accepts operation IDs, CLI commands, SDK methods and posting aliases without authentication',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'frm-cli-schema-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const credentials=join(directory,'credentials-must-not-exist');
+ const cases=[
+  ['submit_candidates','submit_candidates'],['submit-candidates','submit_candidates'],['submitCandidates','submit_candidates'],
+  ['request_x_connection','request_x_connection'],['request-x-connection','request_x_connection'],['requestXConnection','request_x_connection'],['connect-x','request_x_connection'],
+  ['publish_post','publish_post'],['publish-post','publish_post'],['publishPost','publish_post'],['post','publish_post'],
+  ['get_publication_request','get_publication_request'],['get-publication-request','get_publication_request'],['getPublicationRequest','get_publication_request'],['post-status','get_publication_request'],
+ ];
+ for(const [name,operationId] of cases){
+  const child=spawnSync(process.execPath,[cli,'boom','schema',name],{encoding:'utf8',env:{...process.env,FRM_CONFIG_DIR:credentials}});
+  assert.equal(child.status,0,name+': '+child.stderr);assert.equal(child.stderr,'');const data=JSON.parse(child.stdout);assert.equal(data.source,'contract_snapshot');assert.equal(data.operation.operationId,operationId,name);
+ }
+ const unknown=spawnSync(process.execPath,[cli,'boom','schema','unknown-operation'],{encoding:'utf8',env:{...process.env,FRM_CONFIG_DIR:credentials}});
+ assert.equal(unknown.status,1);assert.equal(unknown.stdout,'');assert.match(unknown.stderr,/Unknown operation/);
+ await assert.rejects(fileStat(credentials),error=>error.code==='ENOENT');
+});

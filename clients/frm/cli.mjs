@@ -182,7 +182,14 @@ async function main(){
  if(operation==='schema'&&product==='boom') {
   if(commands.length>3||output)throw Error('Use boom schema [OPERATION] without --output.');
   const contract=JSON.parse(await readFile(new URL('./contracts/boomscrolling.openapi.json',import.meta.url),'utf8'));
-  if(payload){const operation=Object.values(contract.paths).flatMap(route=>Object.values(route)).find(operation=>operation.operationId===payload);if(!operation)throw Error('Unknown operation in the local schema snapshot.');console.log(JSON.stringify({source:'contract_snapshot',operation},null,2));}
+  if(payload){
+   const aliases={post:'publishPost','post-status':'getPublicationRequest','connect-x':'requestXConnection'};
+   const method=Object.hasOwn(BOOM_COMMANDS,payload)?BOOM_COMMANDS[payload]:Object.hasOwn(aliases,payload)?aliases[payload]:payload;
+   const operationId=Object.hasOwn(BOOM_OPERATIONS,method)?BOOM_OPERATIONS[method].name:payload;
+   const operation=Object.values(contract.paths).flatMap(route=>Object.values(route)).find(operation=>operation.operationId===operationId);
+   if(!operation)throw Error('Unknown operation in the local schema snapshot.');
+   console.log(JSON.stringify({source:'contract_snapshot',operation},null,2));
+  }
   else console.log(JSON.stringify({source:'contract_snapshot',contract},null,2));
   return;
  }
