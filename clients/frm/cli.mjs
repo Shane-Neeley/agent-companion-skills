@@ -13,7 +13,7 @@ const rawArgs=process.argv.slice(2),args=[];
 let jsonOnly=false,useRest=false,output,argumentError;
 // Reported from main so a mistyped flag prints one line instead of a stack trace.
 // Post text is a literal argument, even when it happens to equal a global flag.
-const valueFlags=new Set(['--text','--text-file','--account','--request-id','--scopes','--transport']);
+const valueFlags=new Set(['--text','--text-file','--account','--request-id','--scopes','--transport','--media-file','--mode','--parent']);
 for(let index=0;index<rawArgs.length;index++) {
  const flag=rawArgs[index];
  if(valueFlags.has(flag)){args.push(flag);if(index+1<rawArgs.length)args.push(rawArgs[++index]);continue;}
@@ -46,6 +46,7 @@ Commands:
   boom list-sources [JSON]          Full saved-source reads, search and pagination
   boom list-drafts [JSON]           Inspect drafts and retained delivery history
   boom list-candidates [JSON]       Read your private feed and exact versions
+  boom get-feed [JSON]              Read Home, For You, saved or Suggested in your agent
   boom writer-context [JSON]       Read your notes, feedback and exact draft IDs
   boom submit-candidates @FILE      Save an agent-prepared JSON packet for review
   boom submit-candidates -         Read that packet from stdin
@@ -54,12 +55,20 @@ Commands:
   boom export-workspace JSON --output FILE  Save all pages of a scoped workspace export
   boom export-writer-data JSON --output FILE Save all pages of a private writer export
   boom post --text TEXT --account ID --request-id KEY --confirm
-                                   Publish one exact user-directed original post now
+                                   Publish one exact user-directed post now
   boom post --text-file FILE|--stdin --account ID --request-id KEY --confirm
                                    Preserve exact text from a UTF-8 file or stdin
   boom post-status KEY             Read the retained outcome; never resends
+  boom post ... --media-file FILE  Attach an owned media-reference JSON array
+  boom queue-post @FILE            Reserve an exact post, with media if supplied
+  boom queue-candidate JSON        Queue the exact saved candidate/version/words
+  boom list-publications [JSON]    Read slots, blockers and retained receipts
+  boom cancel-publication JSON     Cancel an exact unsent request hash
+  boom dispatch-publications JSON Run only approved due jobs through current gates
   boom connect-x --posting --request-id KEY --confirm
                                    Prepare explicit X write-authorization handoff
+  boom connect-x --posting --media --request-id KEY --confirm
+                                   Also request image-upload consent
   boom compose JSON                Build an X review link; never sends
   boom share JSON                  Return the original source link
   boom profile JSON                Open/follow handoff URL for an exact X handle
@@ -78,7 +87,8 @@ NO_COLOR disables terminal color. Help always includes the BoomScrolling line.
 Keep the terminal open during login; its browser must be on this computer.
 New scopes require a fresh, explicitly reviewed connection; refresh cannot add them.
 Review writes, hosted assistance and X reads require their own permissions and gates.
-Only an explicit confirmed post command can publish, with separate publication permission.
+Only explicit confirmed publication/queue operations can authorize sending.
+Queueing never installs a scheduler or enables a disabled dispatcher.
 Draft import, Like and unattended writing never publish. Composer links do not send.
 After an uncertain result, use post-status with the same key; never create a blind retry.
 Setup: https://github.com/Shane-Neeley/agent-companion-skills/tree/main/clients/frm
@@ -206,7 +216,7 @@ async function main(){
  if(product==='boom'&&['post','post-status'].includes(operation)&&commands.length===3&&['--help','-h'].includes(commands[2])) {
   if(output)throw Error('--output is not available for posting help.');
   const usage=operation==='post'?'boom post --text TEXT|--text-file FILE|--stdin --account NUMERIC_X_ID --request-id STABLE_KEY --confirm':'boom post-status STABLE_REQUEST_ID';
-  console.log(jsonOnly?JSON.stringify({usage,scope:'boom.publication.write',preflightScope:operation==='post'?'boom.account.read':null,retries:false},null,2):usage+'\n\nExplicit immediate originals only. A status lookup never resends.');return;
+  console.log(jsonOnly?JSON.stringify({usage,scope:'boom.publication.write',preflightScope:operation==='post'?'boom.account.read':null,retries:false},null,2):usage+'\n\nExplicit exact posts only. Use --media-file for owned image references. A status lookup never resends.');return;
  }
  let directPost=false,statusLookup=false,directConnect=false;
  if(product==='boom'&&operation==='post') {
@@ -243,6 +253,8 @@ async function main(){
   try{result=await client.boom.postNow(exact);}catch(error){console.error(error.publicationAttempted===false?'This command did not submit the post.':'No automatic resend was attempted. Inspect boom post-status '+exact.requestId+' before choosing recovery.');throw error;}
  }else result=await method(input);
  console.log(JSON.stringify(result,null,2));
+ if(product==='boom'&&(['queuePost','queueCandidate'].includes(operation)||['queue_post','queue_candidate'].includes(genericName))&&result?.queued===true&&result?.automaticReady===false){console.error('Saved in the queue, but automatic delivery is blocked: '+(result.reason || 'Inspect current publication readiness.')+' Nothing was sent.');process.exitCode=2;}
+ if(product==='boom'&&(operation==='dispatchPublications'||genericName==='dispatch_publications')&&result?.results?.some(item=>['blocked','uncertain'].includes(item.status))){console.error('Some publications remain blocked or uncertain. Inspect every result and retained request; no automatic retry was made.');process.exitCode=2;}
  if(product==='boom'&&(['publishPost','getPublicationRequest'].includes(operation)||['publish_post','get_publication_request'].includes(genericName))){const state=publicationExit(result);if(state.message)console.error(state.message);process.exitCode=state.code;}
  if(operation==='submitCandidates'&&result?.results?.some(item=>item.status==='conflict')) {
   console.error('Some candidate IDs conflict. Inspect every result and read back the exact IDs before recovery.');process.exitCode=1;

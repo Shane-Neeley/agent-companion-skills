@@ -28,12 +28,16 @@ export function createClient(callTool,{listTools,requestOperation}={}) {
     const immediate=current?.publication?.immediate;
     if(immediate?.ready!==true)throw preflightError(immediate?.reason||'Immediate posting is unavailable for this connected account.');
     if(!immediate.target?.userId||String(immediate.target.userId)!==args.targetAccountId)throw preflightError('The connected numeric X account differs from this requested target. Read account status before publishing.');
+    if(args.media?.length&&immediate.media?.ready!==true)throw preflightError(immediate.media?.reason||'Image publication is unavailable for this grant or media budget.');
+    if(args.mode&&args.mode!=='original'&&immediate.modes?.[args.mode]?.ready!==true)throw preflightError(immediate.modes?.[args.mode]?.reason||'This native publication mode is unavailable.');
     let result;try{result=await boomCall('publish_post',args);}catch(error){error.publicationAttempted=error.resourceRequestSent!==false&&error.result?.structuredContent?.code!=='SCOPE_REQUIRED';throw error;}
     const resultError=message=>Object.assign(new Error(message),{publicationAttempted:true});
     if(result?.requestId!==args.requestId||result?.targetAccountId!==args.targetAccountId||result?.text!==args.text)throw resultError('The publication result does not match the exact request. Inspect its status; do not resend.');
     if(result.status==='confirmed') {
       const receipt=result.receipt;
       if(!receipt||!/^[a-f0-9]{64}$/.test(result.requestHash||'')||receipt.requestHash!==result.requestHash||receipt.accountId!==args.targetAccountId||receipt.textVerified!==true||!['bound-create-response','verified-post-readback'].includes(receipt.evidence)||typeof receipt.postId!=='string'||!/^\d+$/.test(receipt.postId)||receipt.url!=='https://x.com/i/status/'+receipt.postId)throw resultError('The publication receipt is not bound to the exact requested text/account. Inspect status; do not resend.');
+      if(args.media?.length&&(receipt.mediaVerified!==true||receipt.media?.length!==args.media.length||!receipt.media.every((item,i)=>item.key===args.media[i].key&&item.type===args.media[i].type&&(item.alt || '')===(args.media[i].alt || '')&&item.key.includes('/'+item.sha256+'.'))))throw resultError('The receipt does not verify the exact attached images. Inspect status; do not resend.');
+      if(args.mode&&args.mode!=='original'&&(receipt.mode!==args.mode||receipt.parentId!==args.parentId||receipt.parentVerified!==true))throw resultError('The receipt does not verify the exact native parent. Inspect status; do not resend.');
     }
     return result;
   }
@@ -60,7 +64,7 @@ export function createClient(callTool,{listTools,requestOperation}={}) {
   }
   return Object.freeze({
     boom:Object.freeze({...Object.fromEntries(Object.entries(BOOM_OPERATIONS).map(([method,operation])=>[method,(args={})=>boomCall(operation.name,args)])),
-      call:boomCall,postNow,rest:async(name,args={})=>{if(!Object.hasOwn(BOOM_OPERATION_SCOPES,name))throw new TypeError('Unknown BoomScrolling operation.');if(!requestOperation)throw new TypeError('Supply the authorized product REST transport.');return requestOperation(name,args);},readMedia,tools:async()=>listTools?listTools():{tools:Object.values(BOOM_OPERATIONS),source:'contract_snapshot'}}),
+      call:boomCall,postNow,publishPost:postNow,rest:async(name,args={})=>{if(!Object.hasOwn(BOOM_OPERATION_SCOPES,name))throw new TypeError('Unknown BoomScrolling operation.');if(!requestOperation)throw new TypeError('Supply the authorized product REST transport.');return requestOperation(name,args);},readMedia,tools:async()=>listTools?listTools():{tools:Object.values(BOOM_OPERATIONS),source:'contract_snapshot'}}),
     kit:Object.freeze({capabilities:()=>call('kit_get_capabilities'),context:()=>call('kit_get_workspace_context'),manifest:()=>call('kit_get_export_manifest')}),
   });
 }

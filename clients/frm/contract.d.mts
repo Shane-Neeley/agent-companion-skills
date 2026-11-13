@@ -39,15 +39,21 @@ export interface OperationInputs {
  "get_account_links": Record<string, never>;
  "list_agent_connections": Record<string, never>;
  "revoke_agent_connection": { "requestId": string; "confirmed": true; "grantId": string; "expectedClientId": string; "expectedExpiresAt": number; };
- "request_x_connection": { "requestId": string; "confirmed": true; "posting"?: boolean; };
+ "request_x_connection": { "requestId": string; "confirmed": true; "posting"?: boolean; "media"?: boolean; };
  "disconnect_x": { "requestId": string; "confirmed": true; "expectedUserId": string; "expectedConnectionVersion": string; };
  "load_following": { "requestId": string; "confirmed": true; };
  "get_drafting_status": Record<string, never>;
  "request_hosted_draft": { "requestId": string; "confirmed": true; "post": { "id": string; "url": string; "text": string; "handle"?: string; "media"?: Array<{ "type": "photo" | "video" | "animated_gif"; "url": string; "alt"?: string; }>; }; "form": "quote" | "reply"; "voice": "straight" | "deadpan" | "promo"; "intent"?: string; "draft"?: string; "approach"?: "own" | "question" | "example" | "disagree" | "shorter"; "hints"?: Array<"concise" | "calm" | "plain">; "reason"?: "" | "opinion" | "voice" | "generic" | "context"; };
  "get_publication_status": Record<string, never>;
  "get_suggested_feed": { "limit"?: number; "cursor"?: string; "query"?: string; };
- "publish_post": { "requestId": string; "text": string; "targetAccountId": string; "confirmed": true; };
+ "get_feed": { "view"?: "home" | "for_you" | "saved" | "suggested"; "limit"?: number; "cursor"?: string; "after"?: number; };
+ "publish_post": { "requestId": string; "text": string; "targetAccountId": string; "confirmed": true; "media"?: Array<{ "key": string; "type": "photo" | "animated_gif"; "alt"?: string; }>; "mode"?: "original" | "quote" | "reply"; "parentId"?: string; };
  "get_publication_request": { "requestId": string; };
+ "queue_post": { "requestId": string; "text": string; "targetAccountId": string; "confirmed": true; "media"?: Array<{ "key": string; "type": "photo" | "animated_gif"; "alt"?: string; }>; "mode"?: "original" | "quote" | "reply"; "parentId"?: string; "scheduledAt"?: number; };
+ "queue_candidate": { "requestId": string; "targetAccountId": string; "confirmed": true; "candidateId": string; "version": number; "expectedText": string; "scheduledAt"?: number; };
+ "list_publications": { "limit"?: number; "cursor"?: string; "status"?: "pending" | "history" | "all"; };
+ "cancel_publication": { "requestId": string; "publicationRequestId": string; "requestHash": string; "confirmed": true; };
+ "dispatch_publications": { "requestId": string; "targetAccountId": string; "confirmed": true; };
  "get_request_status": { "requestId": string; };
 }
 export interface OperationOutputs {
@@ -97,8 +103,14 @@ export interface OperationOutputs {
  "request_hosted_draft": { [key: string]: unknown; };
  "get_publication_status": { [key: string]: unknown; };
  "get_suggested_feed": { [key: string]: unknown; };
+ "get_feed": { [key: string]: unknown; };
  "publish_post": { [key: string]: unknown; };
  "get_publication_request": { [key: string]: unknown; };
+ "queue_post": { [key: string]: unknown; };
+ "queue_candidate": { [key: string]: unknown; };
+ "list_publications": { [key: string]: unknown; };
+ "cancel_publication": { [key: string]: unknown; };
+ "dispatch_publications": { [key: string]: unknown; };
  "get_request_status": { [key: string]: unknown; };
 }
 export type OperationName=keyof OperationInputs;

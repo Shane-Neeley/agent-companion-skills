@@ -12,6 +12,7 @@ export const PRODUCTS=Object.freeze({
   kit:Object.freeze({origin:'https://fortrockmedia.com',scopes:['kit.workspace.read','kit.workspace.export']}),
 });
 const VERSION='2026-07-28';
+const resourceTimeout=(name,args={})=>name==='dispatch_publications'?180_000:name==='publish_post'?60_000+Math.min(4,args.media?.length || 0)*30_000:20_000;
 const random=()=>randomBytes(32).toString('base64url');
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const fail=message=>{throw new Error(message);};
@@ -206,7 +207,7 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
     return authorized(scope,async value=>{
       const clientInfo={name:'fort-rock-media-client',version:'1.0.0'};
       const headers={'Content-Type':'application/json',Accept:'application/json, text/event-stream',Authorization:'Bearer '+value.accessToken,'MCP-Protocol-Version':protocolVersion};
-      const post=(method,params,notification=false)=>request(resource,{timeoutMs:method==='tools/call'&&params.name==='publish_post'?60_000:20_000,method:'POST',headers:{...headers,...(protocolVersion===VERSION?{'Mcp-Method':method,...(params.name?{'Mcp-Name':params.name}:{})}:{})},body:JSON.stringify({jsonrpc:'2.0',...(notification?{}:{id:1}),method,params})});
+      const post=(method,params,notification=false)=>request(resource,{timeoutMs:method==='tools/call'?resourceTimeout(params.name,params.arguments):20_000,method:'POST',headers:{...headers,...(protocolVersion===VERSION?{'Mcp-Method':method,...(params.name?{'Mcp-Name':params.name}:{})}:{})},body:JSON.stringify({jsonrpc:'2.0',...(notification?{}:{id:1}),method,params})});
       if(protocolVersion==='2025-11-25'){
         // Explicit compatibility mode; no fallback/replay after a resource call.
         const initialized=await json(await post('initialize',{protocolVersion,capabilities:{},clientInfo}),'MCP initialization');
@@ -241,7 +242,7 @@ export function createOAuthClient(product,{store=new CredentialStore(),origin:in
       if(method==='GET')for(const [key,input] of Object.entries(args)){
         if(input!==undefined)url.searchParams.set(key,Array.isArray(input)?input.join(','):String(input));
       }
-      const response=await request(url,{timeoutMs:name==='publish_post'?60_000:20_000,method,headers:{Authorization:'Bearer '+value.accessToken,Accept:'application/json',...(method==='POST'?{'Content-Type':'application/json'}:{})},...(method==='POST'?{body:JSON.stringify(args)}:{})});
+      const response=await request(url,{timeoutMs:resourceTimeout(name,args),method,headers:{Authorization:'Bearer '+value.accessToken,Accept:'application/json',...(method==='POST'?{'Content-Type':'application/json'}:{})},...(method==='POST'?{body:JSON.stringify(args)}:{})});
       let result;try{result=await response.json();}catch{fail('REST operation returned invalid JSON.');}
       if(!response.ok){const error=new Error(result?.error||`REST operation failed (HTTP ${response.status}).`);error.status=response.status;error.code=result?.code;error.requestId=result?.requestId;throw error;}
       return result;

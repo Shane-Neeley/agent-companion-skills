@@ -507,6 +507,17 @@ const entries=[
     }
   ],
   [
+    "getFeed",
+    {
+      "name": "get_feed",
+      "scope": "boom.workspace.read",
+      "http": {
+        "method": "GET",
+        "path": "/api/v1/feed"
+      }
+    }
+  ],
+  [
     "publishPost",
     {
       "name": "publish_post",
@@ -525,6 +536,61 @@ const entries=[
       "http": {
         "method": "GET",
         "path": "/api/v1/publication/requests/get"
+      }
+    }
+  ],
+  [
+    "queuePost",
+    {
+      "name": "queue_post",
+      "scope": "boom.publication.write",
+      "http": {
+        "method": "POST",
+        "path": "/api/v1/publication/queue"
+      }
+    }
+  ],
+  [
+    "queueCandidate",
+    {
+      "name": "queue_candidate",
+      "scope": "boom.publication.write",
+      "http": {
+        "method": "POST",
+        "path": "/api/v1/publication/candidates/queue"
+      }
+    }
+  ],
+  [
+    "listPublications",
+    {
+      "name": "list_publications",
+      "scope": "boom.publication.write",
+      "http": {
+        "method": "GET",
+        "path": "/api/v1/publication/queue/list"
+      }
+    }
+  ],
+  [
+    "cancelPublication",
+    {
+      "name": "cancel_publication",
+      "scope": "boom.publication.write",
+      "http": {
+        "method": "POST",
+        "path": "/api/v1/publication/queue/cancel"
+      }
+    }
+  ],
+  [
+    "dispatchPublications",
+    {
+      "name": "dispatch_publications",
+      "scope": "boom.publication.write",
+      "http": {
+        "method": "POST",
+        "path": "/api/v1/publication/queue/dispatch"
       }
     }
   ],

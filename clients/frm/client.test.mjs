@@ -34,7 +34,7 @@ import {BOOM_OPERATIONS} from './operations.mjs';
 import {createHash} from 'node:crypto';
 test('every shared operation has an exact SDK method and unknown calls are refused before transport',async()=>{
  const calls=[],client=createClient(async(name,input)=>{calls.push({name,input});return {structuredContent:{ok:true}};});
- for(const [method,operation] of Object.entries(BOOM_OPERATIONS)){const args={fixture:method};await client.boom[method](args);assert.deepEqual(calls.at(-1),{name:operation.name,input:args});}
+ for(const [method,operation] of Object.entries(BOOM_OPERATIONS)){if(method==='publishPost')continue;const args={fixture:method};await client.boom[method](args);assert.deepEqual(calls.at(-1),{name:operation.name,input:args});}
  const before=calls.length;await assert.rejects(client.boom.call('publish_now',{}),/Unknown BoomScrolling operation/);assert.equal(calls.length,before);
 });
 test('tool discovery uses the supplied live host and labels the fallback snapshot',async()=>{
@@ -100,5 +100,19 @@ test('a receipt that does not bind the exact request remains unresolved and is n
    return {structuredContent:{...input,requestHash:hash,status:'confirmed',connectionVersion:'generation',...change,receipt}};
   });
   await assert.rejects(client.boom.postNow(input),error=>error.publicationAttempted===true);assert.deepEqual(calls,['get_account_status','publish_post']);
+ }
+});
+
+test('image publication uses current media readiness and verifies the exact bound attachment receipt',async()=>{
+ const sha='b'.repeat(64),media=[{key:'owner-objects/'+'a'.repeat(64)+'/'+sha+'.png',type:'photo',alt:'Exact image.'}],input={requestId:'image',text:'Exact image words.',targetAccountId:'123',confirmed:true,media},hash='c'.repeat(64);
+ for(const mode of ['ready','not-ready','wrong-image']) {
+  const calls=[],client=createClient(async(name,args)=>{
+   calls.push(name);
+   if(name==='get_account_status')return {structuredContent:{publication:{immediate:{ready:true,target:{userId:'123'},media:{ready:mode!=='not-ready',reason:'Reconnect with media.write.'}}}}};
+   const receipt={requestHash:hash,postId:'789',url:'https://x.com/i/status/789',accountId:'123',evidence:'verified-post-readback',textVerified:true,mediaVerified:mode!=='wrong-image',media:[{...media[0],sha256:sha}]};
+   return {structuredContent:{...args,requestHash:hash,status:'confirmed',connectionVersion:'generation',receipt}};
+  });
+  if(mode==='ready'){assert.equal((await client.boom.publishPost(input)).receipt.mediaVerified,true);assert.deepEqual(calls,['get_account_status','publish_post']);}
+  else {await assert.rejects(client.boom.publishPost(input));assert.equal(calls.length,mode==='not-ready'?1:2);}
  }
 });

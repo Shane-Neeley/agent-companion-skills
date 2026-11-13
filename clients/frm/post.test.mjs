@@ -43,3 +43,16 @@ test('publication status distinguishes confirmed receipt evidence from an unreso
  assert.deepEqual(connectXArguments(['--posting','--request-id','write-stable','--confirm']),{posting:true,requestId:'write-stable',confirmed:true});
  assert.throws(()=>connectXArguments(['--posting','--request-id','stable']));
  });
+
+test('image and native-parent inputs preserve exact owned references and request separate media consent',async t=>{
+ const media=[{key:'owner-objects/'+'a'.repeat(64)+'/'+'b'.repeat(64)+'.png',type:'photo',alt:'Exact alt text.'}];
+ const directory=await mkdtemp(join(tmpdir(),'boom-post-media-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const file=join(directory,'media.json');await writeFile(file,JSON.stringify(media));
+ const result=await parsePostArguments(['--text','Exact words','--media-file',file,'--mode','quote','--parent','456',...flags]);
+ assert.deepEqual(result.media,media);assert.equal(result.mode,'quote');assert.equal(result.parentId,'456');assert.ok(Object.isFrozen(result.media[0]));
+ assert.throws(()=>validatePostArguments({...result,parentId:undefined}));
+ assert.throws(()=>validatePostArguments({...result,media:[{...media[0],key:'https://example.com/not-owned.png'}]}));
+ assert.throws(()=>validatePostArguments({...result,mode:'original'}));
+ assert.deepEqual(connectXArguments(['--posting','--media','--request-id','image-consent','--confirm']),{posting:true,media:true,requestId:'image-consent',confirmed:true});
+ assert.throws(()=>connectXArguments(['--media','--request-id','image-consent','--confirm']));
+});

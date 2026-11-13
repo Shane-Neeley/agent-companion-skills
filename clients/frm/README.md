@@ -319,9 +319,9 @@ node clients/frm/cli.mjs boom post --stdin --account 1234567890123456789 --reque
 
 The `connect-x --posting` alias prepares the existing `request_x_connection` operation with `posting:true`; it requires both `boom.account.write` and `boom.publication.write` and never completes the X consent screen itself. Without `--posting`, the connection operation retains its read-only default. Do not replace a working grant automatically.
 
-The account IDs and keys above are fictional examples. Use the connected numeric X user ID shown by current server status, not a handle or a generated persona. Choose one stable request ID for the exact text/account and retain it before sending. Text is preserved, including whitespace and Unicode form. Exactly one of `--text`, `--text-file` or `--stdin` is allowed, together with `--account`, `--request-id` and `--confirm`. Input is original text only, within the service's conservative 280-character guard (ASCII one, other code points two; URLs are not shortened for this guard). Media, quotes, replies and schedules are outside this immediate-original path.
+The account IDs and keys above are fictional examples. Use the connected numeric X user ID shown by current server status, not a handle or a generated persona. Choose one stable request ID for the exact text/account and retain it before sending. Text is preserved, including whitespace and Unicode form. Exactly one of `--text`, `--text-file` or `--stdin` is allowed, together with `--account`, `--request-id` and `--confirm`. Input keeps the service's conservative 280-character guard (ASCII one, other code points two; URLs are not shortened for this guard). Owned image references are accepted in `media` or `--media-file`. Native quote/reply modes require exact parent IDs and verified provider eligibility; no automatic conversion occurs. Queue operations are separate.
 
-Before sending, the CLI reads `get_account_status` and matches `publication.immediate.target.userId` to `--account`. It requires immediate readiness and makes one `publish_post` call. The server rechecks current account/generation, write permission, budget, concurrency and retained uncertainty at the send fence. A CLI preflight is not an external delivery receipt. There is no browser-posting fallback and no automatic resource retry. Only the publication resource call gets a bounded 60-second client timeout for its create/optional-readback path; ordinary status calls keep the existing 20-second bound.
+Before sending, the CLI reads `get_account_status` and matches `publication.immediate.target.userId` to `--account`. It requires immediate readiness and makes one `publish_post` call. The server rechecks current account/generation, write permission, budget, concurrency and retained uncertainty at the send fence. A CLI preflight is not an external delivery receipt. There is no browser-posting fallback and no automatic resource retry. Text publication gets a bounded 60-second client timeout. Each owned image adds up to 30 seconds, capped at 180 seconds; due dispatch uses that same maximum. Ordinary status calls keep the existing 20-second bound.
 
 ```sh
 node clients/frm/cli.mjs boom post-status my-stable-post-key
@@ -349,3 +349,23 @@ const retained=await frm.boom.getPublicationRequest({requestId:'your-stable-requ
 ```
 
 `postNow` performs account/readiness preflight and checks the response/receipt binding. `publishPost` is the lower-level shared operation for hosts that already performed that explicit preparation; its server-side permission and exact target/idempotency checks still apply. The connected writer skill has the same explicit request branch. Ordinary draft generation, import, review and recurring writing remain separate from publication.
+
+
+## Feed, images and exact queues
+
+```sh
+node clients/frm/cli.mjs boom get-feed '{"view":"for_you","limit":5}'
+node clients/frm/cli.mjs boom upload-media /absolute/private/image.png
+node clients/frm/cli.mjs boom publish-post @/absolute/private/post.json
+node clients/frm/cli.mjs boom queue-post @/absolute/private/post.json
+node clients/frm/cli.mjs boom queue-candidate @/absolute/private/candidate-request.json
+node clients/frm/cli.mjs boom list-publications '{"status":"pending"}'
+```
+
+`get_feed` / SDK `getFeed` reads Home, For You, saved or Suggested with bounded snapshot cursors and optional `after`. Private views require writer-read permission too. It never loads X or records human views. BoomScrolling For You ranks available material; it is not X's personalized timeline. Direct custom MCP installation does not require a marketplace listing. A user can configure their host's own recurring read after testing access; this client creates no schedule.
+
+For image publication, upload permitted bytes privately, then include returned owned `media:[{key,type:"photo",alt}]` references in the exact publication packet. The friendly `post` accepts `--media-file` containing this array. X requires a separately reviewed `media.write` grant; `connect-x --posting --media --request-id KEY --confirm` prepares that consent handoff. Unknown media pricing or missing scopes fail before provider writes. The server verifies owned bytes/SHA, reserves the upload/metadata maximum under its existing cap, and verifies exact attached media in bounded post readback. GIF processing that has not completed remains held; native video and threads are unsupported.
+
+`queue_post` accepts the same content plus optional UTC-millisecond `scheduledAt`; otherwise it allocates the next free account slot with at least ten minutes to review. `queue_candidate` uses `{requestId,candidateId,version,expectedText,targetAccountId,confirmed:true}` and preserves the saved native parent and media. Likes remain private feedback. `list_publications` reads exact hashes, slots, blockers and retained receipts. `cancel_publication` requires a separate stable request ID, `publicationRequestId`, exact `requestHash` and `confirmed:true`; submitted/uncertain records are protected.
+
+`dispatch_publications({requestId,targetAccountId,confirmed:true})` executes only previously approved due work through existing enablement, verified wake-up, legacy hold, original/current pacing, grant and cost gates. Connecting, queueing and dispatching never install or enable a schedule. Production automatic delivery remains disabled until those prerequisites pass. A blocked queue is retained but is not a promise of a tweet; the CLI exits 2 while preserving its JSON. Read `post-status` / `get_publication_request` after uncertainty, without resending.

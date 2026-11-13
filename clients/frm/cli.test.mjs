@@ -13,7 +13,8 @@ test('help and an empty command explain the writer path without touching credent
   assert.equal(result.status,0,result.stderr);
   assert.match(result.stdout,/fictional offline writer loop/);
   assert.match(result.stdout,/submit-candidates @FILE/);
-  assert.match(result.stdout,/Only an explicit confirmed post command can publish/);
+  assert.match(result.stdout,/Only explicit confirmed publication\/queue operations can authorize sending/);
+  assert.match(result.stdout,/get-feed/);assert.match(result.stdout,/queue-candidate/);assert.match(result.stdout,/--media-file/);
   assert.match(result.stdout,/your doomscrolling time isn’t valuable\. your boomscrolling time is\./);
   assert.ok(!result.stdout.includes('\u001b['));
   assert.equal(result.stderr,'');
