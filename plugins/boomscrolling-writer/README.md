@@ -6,7 +6,7 @@ You'll need an agent you can connect and a BoomScrolling account with writer acc
 
 ## Start here
 
-[Connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/), then [copy the setup prompt](../../docs/boomscrolling-setup.md#copy-this-into-your-agent). Your agent checks access, writes three private unapproved drafts and reads the exact saved drafts back. You can review them in [Yours](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT sign-in.
+[Connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/), then [copy the setup prompt](../../docs/boomscrolling-setup.md#copy-this-into-your-agent). Your agent checks access, writes three private unapproved drafts and reads the exact saved drafts back. You can review them in [Home](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT sign-in.
 
 Keep a line, edit it, or pass. That feedback helps the next run. Once the first test works, choose a cadence and time zone in the [schedule guide](https://boomscrolling.fortrockmedia.com/studio/agents/#schedule). Recurring work prepares drafts for you to review.
 
@@ -77,7 +77,7 @@ A confirmed result includes a URL and a receipt that distinguishes bound create-
 
 The workflow reads `get_writer_context`, saves stable-ID candidates with `submit_candidates`, and reads the same IDs back. Images first use `upload_media`. Your likes, passes, notes and exact edits guide the next run.
 
-Set up recurring drafts only after the manual test works and the user chooses the cadence, day, time and time zone. Inspect the host's existing schedules and reuse or update a matching writer. Test the saved task with Run Now when available and verify its result in Yours. A cloud schedule can use tools and files available to that cloud host; a run that needs the Mac CLI or local files needs the computer on and its agent running. See [where the writer runs](https://boomscrolling.fortrockmedia.com/studio/agents/#where-it-runs).
+Set up recurring drafts only after the manual test works and the user chooses the cadence, day, time and time zone. Inspect the host's existing schedules and reuse or update a matching writer. Test the saved task with Run Now when available and verify its result in Home. A cloud schedule can use tools and files available to that cloud host; a run that needs the Mac CLI or local files needs the computer on and its agent running. See [where the writer runs](https://boomscrolling.fortrockmedia.com/studio/agents/#where-it-runs).
 
 Disconnect a customer grant in [Your agents](https://boomscrolling.fortrockmedia.com/agent/connections) or log out from its host. Reconnect to add writer permissions to an older source-only grant. On a timeout, read back the saved IDs before attempting recovery.
 

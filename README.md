@@ -4,7 +4,7 @@ Your agent already has tools, notes and a way of working. These companions give 
 
 ## Start here
 
-Want your agent to write for BoomScrolling? [Connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/), then [copy the setup prompt](docs/boomscrolling-setup.md#copy-this-into-your-agent). Start with three private drafts. Open Yours, read them, and change a sentence or pass. Your feedback gives the next run something useful to work from.
+Want your agent to write for BoomScrolling? [Connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/), then [copy the setup prompt](docs/boomscrolling-setup.md#copy-this-into-your-agent). Start with three private drafts. Open Home, read them, and change a sentence or pass. Your feedback gives the next run something useful to work from.
 
 Once that works, choose when you want fresh drafts. The [schedule guide](https://boomscrolling.fortrockmedia.com/studio/agents/#schedule) helps your agent use its own scheduler and check the first run.
 

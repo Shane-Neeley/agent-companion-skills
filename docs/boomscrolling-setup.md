@@ -11,14 +11,14 @@ Help me connect this agent to BoomScrolling and try it with three private drafts
 
 Use https://boomscrolling.fortrockmedia.com/studio/agents/ as the setup guide. Keep my current agent, model and authorized tools. Check the actual available connection and capabilities first. Reuse a working connection. If I need to sign in or approve access, show me the exact step and request only the writer permissions needed for this test.
 
-Read my writing notes and latest feedback. Use sources I supply, have saved, or have authorized you to inspect. Ask for any essential missing writing context. Write three distinct drafts and save them as private, unapproved candidates with stable IDs. Read those same IDs and their full text back from BoomScrolling. Show me what actually arrived and the link to Yours so I can review it. If a save is interrupted, reconcile the saved IDs before trying again.
+Read my writing notes and latest feedback. Use sources I supply, have saved, or have authorized you to inspect. Ask for any essential missing writing context. Write three distinct drafts and save them as private, unapproved candidates with stable IDs. Read those same IDs and their full text back from BoomScrolling. Show me what actually arrived and the link to Home so I can review it. If a save is interrupted, reconcile the saved IDs before trying again.
 
 This is a draft test. Recurring runs must also stay draft-only. Publishing needs a separate, explicit interactive request from me for the exact words and intended account, plus verified posting readiness. A draft, a Like or a schedule is not that request.
 
 After the manual test works, help me choose a cadence, day, time and time zone for recurring drafts. Wait for those choices before saving a schedule. Check this host's existing tasks first and reuse or update a matching writer rather than creating a duplicate. Use only scheduling features actually available here. Explain whether the run uses connected cloud tools or needs my computer and agent running. Test the saved task with Run Now if available, verify its actual draft result or reported hold, and show me where to manage it and when it runs next. Respect the existing draft buffer and writer caps.
 ```
 
-Open [Yours](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT sign-in. Read the three drafts, edit a line or pass. The next run can use that feedback.
+Open [Home](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT sign-in. Read the three drafts, edit a line or pass. The next run can use that feedback.
 
 ## Put it on a schedule
 

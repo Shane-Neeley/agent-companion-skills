@@ -4,7 +4,7 @@ Your agent does the writing with the tools and knowledge it already has. Review 
 
 ## Start here
 
-If you want your agent to write for BoomScrolling, [connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/) and [copy the setup prompt](../../docs/boomscrolling-setup.md#copy-this-into-your-agent). It walks through three private drafts and verifies that they arrived in Yours. After that, choose when you want fresh drafts in the [schedule guide](https://boomscrolling.fortrockmedia.com/studio/agents/#schedule).
+If you want your agent to write for BoomScrolling, [connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/) and [copy the setup prompt](../../docs/boomscrolling-setup.md#copy-this-into-your-agent). It walks through three private drafts and verifies that they arrived in Home. After that, choose when you want fresh drafts in the [schedule guide](https://boomscrolling.fortrockmedia.com/studio/agents/#schedule).
 
 You'll need an agent you can connect and a BoomScrolling account with writer access. Access is currently available to the owner pilot and verified paid accounts. New sales are off; installing the client does not add account access.
 
@@ -48,7 +48,7 @@ node clients/frm/cli.mjs boom submit-candidates @/absolute/private/path/candidat
 node clients/frm/cli.mjs boom writer-context '{"candidateIds":["your-stable-candidate-id"]}'
 ```
 
-Open [BoomScrolling → Yours](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT account. Your drafts should be there. Change a sentence or pass; the next writing run can read that choice. The connection saves private drafts, and publishing remains your separate choice.
+Open [BoomScrolling → Home](https://boomscrolling.fortrockmedia.com/studio/app/) with the same ChatGPT account. Your drafts should be there. Change a sentence or pass; the next writing run can read that choice. The connection saves private drafts, and publishing remains your separate choice.
 
 Use `node clients/frm/cli.mjs status boom` to check the connection and `node clients/frm/cli.mjs logout boom` to disconnect. The details below cover other hosts, images, SDK use and recovery.
 
@@ -204,7 +204,7 @@ Product information: [BoomScrolling](https://fortrockmedia.com/boomscrolling/) �
 
 ### Original post appearance
 
-Writer packets can preserve `persona.avatarUrl` and source `handle`, `avatarUrl`, `createdAt`, `media` and `mediaUnavailable`. Profile photos must use X's HTTPS profile-image host (`pbs.twimg.com/profile_images/` or `default_profile_images/`). Source media accepts up to four photo/video/GIF thumbnail previews on `pbs.twimg.com`; candidate images still use private uploaded keys. The CLI passes these fields in the same JSON packet as the SDK. Use captured source metadata, never guessed photos or dates. Existing candidate IDs remain immutable, including their originally supplied metadata. Yours can load X's actual embedded original for older imports without rewriting their records.
+Writer packets can preserve `persona.avatarUrl` and source `handle`, `avatarUrl`, `createdAt`, `media` and `mediaUnavailable`. Profile photos must use X's HTTPS profile-image host (`pbs.twimg.com/profile_images/` or `default_profile_images/`). Source media accepts up to four photo/video/GIF thumbnail previews on `pbs.twimg.com`; candidate images still use private uploaded keys. The CLI passes these fields in the same JSON packet as the SDK. Use captured source metadata, never guessed photos or dates. Existing candidate IDs remain immutable, including their originally supplied metadata. Home can load X's actual embedded original for older imports without rewriting their records.
 
 The complete app/API/CLI engineering inventory lives in the app repository's `docs/api-coverage.md`. All shared operations have SDK methods and CLI aliases. `boom tools` discovers the tools permitted by the current connection, while `boom commands` lists the local contract snapshot and scopes. `boom schema [OPERATION]` inspects that offline OpenAPI snapshot without signing in. The same token also works with the canonical `/api/v1/` REST operation routes through `--rest`; arbitrary browser-session routes remain outside that bearer surface.
 
