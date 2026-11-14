@@ -6,7 +6,7 @@ Your agent does the writing with the tools and knowledge it already has. Review 
 
 If you want your agent to write for BoomScrolling, [connect the agent you already use](https://boomscrolling.fortrockmedia.com/studio/agents/) and [copy the setup prompt](../../docs/boomscrolling-setup.md#copy-this-into-your-agent). It walks through three private drafts and verifies that they arrived in Home. After that, choose when you want fresh drafts in the [schedule guide](https://boomscrolling.fortrockmedia.com/studio/agents/#schedule).
 
-You'll need an agent you can connect and a BoomScrolling account with writer access. Access is currently available to the owner pilot and verified paid accounts. New sales are off; installing the client does not add account access.
+You'll need an agent you can connect and a BoomScrolling account with writer access. [Subscribe for $19/month](https://boomscrolling.fortrockmedia.com/account/connections) for the private feed and connected-agent access. Bring your own agent, model access and tools. Hosted AI, X reads and automatic posting aren't included. Installing the client does not add account access.
 
 ## For your agent
 
@@ -184,6 +184,12 @@ const delivered=await frm.boom.writerContext({candidateIds:candidates.map(item=>
 ```
 
 `writerContext` includes caller-owned settings, feedback, edit pairs, candidate counts and cadence. Use `candidateIds` for exact readback after delivery; the general recent context can be truncated. `submitCandidates` accepts originals, quotes and replies; quotes/replies require an actually inspected canonical X source with its text and author. `uploadMedia({contentType,dataBase64})` returns an account-private object key for a candidate's `media:[{key,type,alt}]` (type `photo` or `animated_gif`). Standard base64 has no data-URL prefix. Keep source/rights evidence in the private packet and never upload arbitrary workspace files as context.
+
+For examples relevant to a particular writing job, pass optional `task:{kind,text}` to `writerContext` or the CLI. This reads existing examples; it does not generate writing or record feedback:
+
+```sh
+node clients/frm/cli.mjs boom writer-context '{"task":{"kind":"original","text":"A short post about repairing an old tool"}}'
+```
 
 Candidate IDs are idempotency keys. Save the packet before submission and preserve it across interruptions. After an uncertain result, read its exact IDs back before retrying; only confirmed missing content from that same packet can be recovered. A conflict never authorizes replacing an edited candidate. Neither client nor SDK retries resource calls. Existing schedules and daily/unread caps remain the writer owner's responsibility; the integration creates no scheduler.
 
@@ -368,4 +374,4 @@ For image publication, upload permitted bytes privately, then include returned o
 
 `queue_post` accepts the same content plus optional UTC-millisecond `scheduledAt`; otherwise it allocates the next free account slot with at least ten minutes to review. `queue_candidate` uses `{requestId,candidateId,version,expectedText,targetAccountId,confirmed:true}` and preserves the saved native parent and media. Likes remain private feedback. `list_publications` reads exact hashes, slots, blockers and retained receipts. `cancel_publication` requires a separate stable request ID, `publicationRequestId`, exact `requestHash` and `confirmed:true`; submitted/uncertain records are protected.
 
-`dispatch_publications({requestId,targetAccountId,confirmed:true})` executes only previously approved due work through existing enablement, verified wake-up, legacy hold, original/current pacing, grant and cost gates. Connecting, queueing and dispatching never install or enable a schedule. Production automatic delivery remains disabled until those prerequisites pass. A blocked queue is retained but is not a promise of a tweet; the CLI exits 2 while preserving its JSON. Read `post-status` / `get_publication_request` after uncertainty, without resending.
+`dispatch_publications({requestId,targetAccountId,confirmed:true})` executes only previously approved due work through existing enablement, verified wake-up, legacy hold, original/current pacing, grant and cost gates. Connecting, queueing and dispatching never install or enable a schedule. The separately authorized owner pilot is enabled with a verified wake; customer paid access does not include automatic posting. Customer Likes and agent feedback remain private. The owner browser's explicit Like-to-post route is separate from these agent queues and can make the first eligible fresh Like due immediately. A blocked queue is retained but is not a promise of a tweet; the CLI exits 2 while preserving its JSON. Read `post-status` / `get_publication_request` after uncertainty, without resending.

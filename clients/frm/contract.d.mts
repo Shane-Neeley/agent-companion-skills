@@ -3,7 +3,7 @@ export interface OperationInputs {
  "get_capabilities": Record<string, never>;
  "get_workspace_context": { "limit"?: number; "cursor"?: string; };
  "propose_draft": { "requestId": string; "expectedRevision": number; "postId": string; "sourceVersion": string; "form": "reply" | "quote"; "text": string; };
- "get_writer_context": { "authorHandle"?: string; "candidateIds"?: Array<string>; };
+ "get_writer_context": { "task"?: { "kind"?: "original" | "quote" | "reply"; "text"?: string; }; "authorHandle"?: string; "candidateIds"?: Array<string>; };
  "submit_candidates": { "candidates": Array<{ "id": string; "kind": "original" | "quote" | "reply"; "persona": { "name": string; "handle": string; "avatarUrl"?: string; }; "text": string; "source"?: { "url": string; "text": string; "author": string; "handle"?: string; "avatarUrl"?: string; "createdAt"?: string; "media"?: Array<{ "type": "photo" | "video" | "animated_gif"; "url": string; "alt"?: string; "width"?: number; "height"?: number; }>; "mediaUnavailable"?: boolean; }; "media"?: Array<{ "key": string; "type": "photo" | "animated_gif"; "alt"?: string; }>; "tags"?: { [key: string]: string; }; "legacyId"?: string; }>; };
  "upload_media": { "contentType": "image/png" | "image/jpeg" | "image/gif" | "image/webp"; "dataBase64": string; };
  "list_sources": { "limit"?: number; "cursor"?: string; "query"?: string; };

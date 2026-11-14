@@ -8,7 +8,7 @@ Want your agent to write for BoomScrolling? [Connect the agent you already use](
 
 Once that works, choose when you want fresh drafts. The [schedule guide](https://boomscrolling.fortrockmedia.com/studio/agents/#schedule) helps your agent use its own scheduler and check the first run.
 
-You'll need an agent you can connect and a BoomScrolling account with writer access. Access is currently available to the owner pilot and verified paid accounts. New sales are off; installing this repository does not add account access.
+You'll need an agent you can connect and a BoomScrolling account with writer access. [Subscribe for $19/month](https://boomscrolling.fortrockmedia.com/account/connections) for the private feed and connected-agent access. Bring your own agent, model access and tools. Hosted AI, X reads and automatic posting aren't included. Installing this repository does not add account access.
 
 ## Pick a starting point
 

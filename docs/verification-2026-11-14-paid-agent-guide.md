@@ -1,0 +1,9 @@
+# Paid-agent guide consistency
+
+Updated the repository README, client README, setup prompt and writer plugin README to link to the live $19/month private-feed and connected-agent offer. Customers bring their own agent, model access and tools. Hosted AI, X reads and automatic posting are excluded. Updated the owner-pilot media wording and separated owner browser Like-to-post from private agent feedback and unattended writers.
+
+The deployed product added an optional `task:{kind,text}` hint to writer context. Regenerated the OpenAPI snapshot and TypeScript input type from the shared product source; the operation registry did not change. CLI schema help now exposes that exact hint, with a small read-only example. A hosted read-only request accepted it. No model call, source load, feedback write or draft submission was performed.
+
+Verification: 71 CLI/SDK tests, eight Python regressions, offline help/schema/demo, two standalone skill metadata checks, 29 relative documentation links and whitespace checks passed. The BoomScrolling product's 622 tests, lint, types and production build passed. Current OpenAI custom-MCP/task and Claude connector/Cowork/Code scheduling documentation was read. Host-specific connection labels, minimum writer permissions, manual first test, exact-ID readback and scheduled-environment requirements remain consistent.
+
+The public front door embeds no account screenshots. Its historical setup capture has a retired Home → Yours label and was not reused; no private account data was visible. New guide captures show public prose only. Real non-owner connection/save/reopen/isolation, customer benefit, cross-host schedule execution and physical-device behavior remain unverified. The useful next check is the existing owner's three-draft trial with a willing authorized non-owner account, without creating access or a schedule merely for documentation QA.

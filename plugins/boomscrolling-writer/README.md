@@ -2,7 +2,7 @@
 
 Your existing agent writes. Your private BoomScrolling feed holds the results and your feedback. Review on your phone at [BoomScrolling](https://boomscrolling.fortrockmedia.com/studio/app/), using the same ChatGPT account you connected from your agent.
 
-You'll need an agent you can connect and a BoomScrolling account with writer access. Access is currently available to the owner pilot and verified paid accounts. New sales are off; installing the plugin does not add account access.
+You'll need an agent you can connect and a BoomScrolling account with writer access. [Subscribe for $19/month](https://boomscrolling.fortrockmedia.com/account/connections) for the private feed and connected-agent access. Bring your own agent, model access and tools. Hosted AI, X reads and automatic posting aren't included. Installing the plugin does not add account access.
 
 ## Start here
 
@@ -71,7 +71,7 @@ The agent resolves the connected numeric X account, checks immediate readiness, 
 
 For the standalone CLI, see [explicit immediate posting](../../clients/frm/README.md#tweet-exact-text-now). Publication uses the optional `boom.publication.write` scope; CLI account preflight also needs `boom.account.read`. Existing default writer grants and refreshes never gain that permission. Do not disconnect a working grant automatically to add it.
 
-A confirmed result includes a URL and a receipt that distinguishes bound create-response evidence from a verified post readback. An unknown or uncertain attempt is inspected by its saved request ID, never resent automatically. No media, reply, quote or scheduled posting is part of this immediate-original path. Current server gates still determine availability.
+A confirmed result includes a URL and a receipt that distinguishes bound create-response evidence from a verified post readback. An unknown or uncertain attempt is inspected by its saved request ID, never resent automatically. The owner pilot also supports explicitly requested owned images, with separate X media consent and verified costs. Native quotes and replies require an exact parent and current provider eligibility; they are not converted to originals. Exact queues are separate operations. See the [current CLI contract](../../clients/frm/README.md#feed-images-and-exact-queues) before using them. Current server gates still determine availability.
 
 ## Verify and disconnect
 

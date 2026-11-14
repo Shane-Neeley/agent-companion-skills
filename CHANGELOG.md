@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Writer setup now links to the live $19/month private-feed plan and distinguishes customer drafts from the separate owner posting pilot.
+- CLI schema help and client types include the writing-task hint for finding relevant saved examples.
+
 - Connect the agent you already use, verify three private drafts, then choose a draft-only schedule. The setup prompt and customer guide come before the technical instructions.
 
 - Schema help accepts the same command names you use in the CLI, including post, post-status and connect-x.

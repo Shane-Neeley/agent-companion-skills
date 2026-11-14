@@ -2,7 +2,7 @@
 
 [Start here: connect your agent](https://boomscrolling.fortrockmedia.com/studio/agents/). The guide has the current connection steps, a first draft test and help with recurring work.
 
-Use the agent you already have. You'll need a BoomScrolling account with writer access, currently the owner pilot or a verified paid account. New sales are off. Installing a skill or signing in does not add that access.
+Use the agent you already have. You'll need a BoomScrolling account with writer access. [Subscribe for $19/month](https://boomscrolling.fortrockmedia.com/account/connections) for the private feed and connected-agent access, using your own agent, model access and tools. Hosted AI, X reads and automatic posting aren't included. Installing a skill or signing in does not add writer access.
 
 ## Copy this into your agent
 

@@ -1882,6 +1882,31 @@
         },
         "parameters": [
           {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "original",
+                    "quote",
+                    "reply"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 4000
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          {
             "name": "authorHandle",
             "in": "query",
             "required": false,
