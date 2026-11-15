@@ -8,7 +8,8 @@ import {createOAuthClient,PRODUCTS} from './oauth.mjs';
 import {BOOM_COMMANDS,BOOM_OPERATIONS} from './operations.mjs';
 import {BOOM_TAGLINE,boomMasthead,terminalBrand} from './terminal.mjs';
 import {composeLink,shareLink,profileLink,writingContext,takeCard} from './helpers.mjs';
-import {parsePostArguments,postStatusArguments,validatePostArguments,publicationExit,connectXArguments} from './post.mjs';
+import {parsePostArguments,postStatusArguments,validatePostArguments,publicationExit,publicationStatusExit,connectXArguments} from './post.mjs';
+import {validateOperationInput} from './validation.mjs';
 const rawArgs=process.argv.slice(2),args=[];
 let jsonOnly=false,useRest=false,output,argumentError;
 // Reported from main so a mistyped flag prints one line instead of a stack trace.
@@ -75,6 +76,7 @@ Commands:
   boom share JSON                  Return the original source link
   boom profile JSON                Open/follow handoff URL for an exact X handle
   boom schema [OPERATION]          Inspect the offline shared API schema
+  boom validate OPERATION @FILE|-  Check input locally; never connects or sends
   boom writing-context JSON        Local writing approach and ChatGPT handoff link
   boom take-card JSON --output FILE Export a shareable SVG of your own words
   kit context                      Read your reviewed business workspace
@@ -208,6 +210,11 @@ async function main(){
   return;
  }
  const helpers={compose:composeLink,share:shareLink,profile:profileLink,'writing-context':writingContext,'take-card':takeCard};
+ if(product==='boom'&&operation==='validate') {
+  if(commands.length!==4||output)throw Error('Use boom validate OPERATION JSON|@FILE|- without --output.');
+  const result=validateOperationInput(commands[2],await readPayload(commands[3]));
+  console.log(JSON.stringify(result,null,2));process.exitCode=result.valid?0:1;return;
+ }
  if(product==='boom'&&Object.hasOwn(helpers,operation)) {
   if(commands.length>3)throw Error('Supply one JSON argument, @FILE or stdin.');
   const result=helpers[operation](await readPayload(payload));
@@ -243,6 +250,10 @@ async function main(){
  const method=genericName?(input=>client.boom.call(genericName,input)):client[product][operation];
  if(typeof method!=='function'||['call','readMedia'].includes(operation)&&!genericName)throw Error('Operation unavailable for this product; run boom commands or --help.');
  const input=directPost||statusLookup||directConnect?payload:await readPayload(payload,operation);
+ if(product==='boom'&&(operation==='updateWriterSettings'||genericName==='update_writer_settings')) {
+  const validation=validateOperationInput('update_writer_settings',input);
+  if(!validation.valid){console.log(JSON.stringify(validation,null,2));process.exitCode=1;return;}
+ }
  let result;
  if(output){
   if(product==='boom'&&operation==='downloadMedia'){
@@ -257,7 +268,7 @@ async function main(){
  console.log(JSON.stringify(result,null,2));
  if(product==='boom'&&(['queuePost','queueCandidate'].includes(operation)||['queue_post','queue_candidate'].includes(genericName))&&result?.queued===true&&result?.automaticReady===false){console.error('Saved in the queue, but automatic delivery is blocked: '+(result.reason || 'Inspect current publication readiness.')+' Nothing was sent.');process.exitCode=2;}
  if(product==='boom'&&(operation==='dispatchPublications'||genericName==='dispatch_publications')&&result?.results?.some(item=>['blocked','uncertain'].includes(item.status))){console.error('Some publications remain blocked or uncertain. Inspect every result and retained request; no automatic retry was made.');process.exitCode=2;}
- if(product==='boom'&&(['publishPost','getPublicationRequest'].includes(operation)||['publish_post','get_publication_request'].includes(genericName))){const state=publicationExit(result);if(state.message)console.error(state.message);process.exitCode=state.code;}
+ if(product==='boom'&&(['publishPost','getPublicationRequest'].includes(operation)||['publish_post','get_publication_request'].includes(genericName))){const lookup=operation==='getPublicationRequest'||genericName==='get_publication_request';const state=lookup?publicationStatusExit(result,input.requestId):publicationExit(result);if(state.message)console.error(state.message);process.exitCode=state.code;}
  if(operation==='submitCandidates'&&result?.results?.some(item=>item.status==='conflict')) {
   console.error('Some candidate IDs conflict. Inspect every result and read back the exact IDs before recovery.');process.exitCode=1;
  }

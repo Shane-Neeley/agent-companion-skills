@@ -62,7 +62,8 @@ test('every shared operation maps to an exact CLI alias and generic calls preser
  const adapter=join(directory,'trusted-adapter.mjs');await writeFile(adapter,'export async function callTool(name,args){return {structuredContent:{name,args}};} export async function listTools(){return {tools:[{name:"get_source"}]};}');
  for(const [command,method] of Object.entries(BOOM_COMMANDS)){
   if(['publishPost','getPublicationRequest'].includes(method))continue; // Receipt-aware posting commands are exercised below.
-  const result=spawnSync(process.execPath,[cli,'--transport',adapter,'boom',command,'{"fixture":true}'],{encoding:'utf8'});assert.equal(result.status,0,result.stderr);assert.equal(result.stderr,'');assert.deepEqual(JSON.parse(result.stdout),{name:BOOM_OPERATIONS[method].name,args:{fixture:true}});
+  const input=method==='updateWriterSettings'?{requestId:'fixture',revision:0,enabled:true,voice:'Fictional notes.'}:{fixture:true};
+  const result=spawnSync(process.execPath,[cli,'--transport',adapter,'boom',command,JSON.stringify(input)],{encoding:'utf8'});assert.equal(result.status,0,result.stderr);assert.equal(result.stderr,'');assert.deepEqual(JSON.parse(result.stdout),{name:BOOM_OPERATIONS[method].name,args:input});
  }
  const generic=spawnSync(process.execPath,[cli,'--json','--transport',adapter,'boom','call','get_source','{"sourceId":"exact"}'],{encoding:'utf8'});assert.deepEqual(JSON.parse(generic.stdout),{name:'get_source',args:{sourceId:'exact'}});assert.equal(generic.stderr,'');
  const tools=spawnSync(process.execPath,[cli,'--transport',adapter,'boom','tools'],{encoding:'utf8'});assert.deepEqual(JSON.parse(tools.stdout),{tools:[{name:'get_source'}]});

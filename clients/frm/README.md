@@ -356,7 +356,9 @@ node clients/frm/cli.mjs boom post-status my-stable-post-key
 
 After a timeout, lost response or `preparing`/`submitting`/`uncertain`/`held` result, read that saved key's status. Do not generate another key or blindly repeat a send to find out what happened. Status lookup never resends. An identical request key is protected by the server; changed text or target under that key conflicts rather than replacing the request. Readiness can change after a prior attempt, so use `post-status` for recovery even when a new `post` preflight is blocked.
 
-The CLI prints the complete result as JSON. A matching `confirmed` result with its bound receipt exits zero; `rejected` exits one; unresolved states or an interrupted submission exit two and include the lookup instruction on stderr. A retained pre-send gate error can report `rejected` with `attempted:false`; an outer request not yet settled can report `held` with `attempted:null`. Those records have no frozen text/target and never authorize a resend. The receipt distinguishes `bound-create-response` evidence from `verified-post-readback`. Exact create-response text can establish the first; when X transforms a supplied URL, the server may use one bounded read of that same post to verify the numeric author and expanded text. Neither proves that the post remains visible later. Share only the returned public URL and intended account, not credentials or private status records.
+The CLI prints the complete result as JSON. For immediate posting, a matching `confirmed` result with its bound receipt exits zero; `rejected` exits one; unresolved states or an interrupted submission exit two and include the lookup instruction on stderr. A retained pre-send gate error can report `rejected` with `attempted:false`; an outer request not yet settled can report `held` with `attempted:null`. Those records have no frozen text/target and never authorize a resend. The receipt distinguishes `bound-create-response` evidence from `verified-post-readback`. Exact create-response text can establish the first; when X transforms a supplied URL, the server may use one bounded read of that same post to verify the numeric author and expanded text. Neither proves that the post remains visible later. Share only the returned public URL and intended account, not credentials or private status records.
+
+For `post-status` and all `get_publication_request` aliases, a successful read of a well-formed, matching `queued` or `canceled` record also exits zero when it is explicitly unsent and has no receipt. Read the returned `status`: lookup success does not mean a tweet was sent. `queued` requires no blocking reason; `canceled` retains its cancellation reason. Blocked, uncertain, incomplete or contradictory results still exit two. Confirmed records retain the same strict receipt checks, and rejected records exit one. Status commands never resend or authorize recovery by themselves.
 
 The [fictional publication packet](examples/publish-original.json) shows the lower-level JSON shape. Its account ID is a fixture, not a target to use.
 
@@ -379,6 +381,17 @@ const retained=await frm.boom.getPublicationRequest({requestId:'your-stable-requ
 
 
 ## Feed, images and exact queues
+
+### Check a packet before connecting
+
+```sh
+node clients/frm/cli.mjs boom validate queue-post @/absolute/private/queue-packet.json
+node clients/frm/cli.mjs boom validate update-writer-settings @/absolute/private/notes.json
+```
+
+`validate` accepts a command alias or operation ID and JSON, `@FILE`, or stdin (`-`). It uses the bundled contract without credentials or network access, preserves the input and reports field paths without echoing private values. Valid input exits 0; invalid input exits 1 with structured errors. This is a local input check, not approval, an available slot, current account readiness or a send. The server remains authoritative, and the bundled snapshot can lag the deployed contract. The checker supports the snapshot's input vocabulary, not arbitrary JSON Schema; unfamiliar validation rules fail closed.
+
+Writer-setting updates also perform this check automatically before transport. Writer notes keep the product's 2,000 UTF-16-unit limit (an emoji may take two units); nothing is silently shortened. Queue/post validation additionally checks the conservative post-text limit and native parent/media shape. Other shared operations retain their existing pass-through behavior unless you explicitly run `validate` first.
 
 ```sh
 node clients/frm/cli.mjs boom get-feed '{"view":"for_you","limit":5}'

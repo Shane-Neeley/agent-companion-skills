@@ -42,6 +42,25 @@ export function publicationExit(result) {
  if(result?.status==='rejected')return {code:1,message:'The service rejected this request. Inspect the reason and current readiness; do not blindly resend.'};
  return {code:2,message:`Publication is ${result?.status||'unresolved'}. Inspect boom post-status ${result?.requestId||'YOUR_REQUEST_ID'}; do not submit a new send.`};
 }
+// A successful read of an unsent queue item is not a successful publication.
+// Keep immediate-post receipt requirements in publicationExit unchanged.
+export function publicationStatusExit(result,requestId) {
+ const unresolved={code:2,message:'The retained publication status is incomplete or inconsistent. Inspect the same request; do not submit a new send.'};
+ if(typeof requestId!=='string'||!requestPattern.test(requestId)||result?.requestId!==requestId)return unresolved;
+ if(!['queued','canceled'].includes(result?.status))return publicationExit(result);
+ if(result.attempted!==false||result.confirmed!==false||result.publicationVerified!==false||result.independentReadback!==false||result.retryAuthorized!==false||result.receipt!==null||result.postId!==null||
+    !/^[a-f0-9]{64}$/.test(result.requestHash||'')||typeof result.connectionVersion!=='string'||!result.connectionVersion||
+    !Number.isSafeInteger(result.scheduledAt)||result.scheduledAt<=0||
+    !Array.isArray(result.media)||!['original','quote','reply'].includes(result.mode)||
+    (result.status==='queued'?result.reason!==null:typeof result.reason!=='string'||!result.reason.trim()))return unresolved;
+ try {
+  // Validate frozen content only; this does not create consent or call a sender.
+  validatePostInput({requestId:result.requestId,text:result.text,targetAccountId:result.targetAccountId,confirmed:true,mode:result.mode,
+   ...(result.media.length?{media:result.media}:{}),...(result.parentId!==null?{parentId:result.parentId}:{})});
+ }catch{return unresolved;}
+ if(result.mode==='original'&&result.parentId!==null)return unresolved;
+ return {code:0,message:''};
+}
 export function connectXArguments(tokens) {
  const input={};
  for(let index=0;index<tokens.length;index++) {
