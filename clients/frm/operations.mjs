@@ -452,6 +452,28 @@ const entries=[
     }
   ],
   [
+    "verifyXFunding",
+    {
+      "name": "verify_x_funding",
+      "scope": "boom.provider.use",
+      "http": {
+        "method": "POST",
+        "path": "/api/v1/account/x/funding/verify"
+      }
+    }
+  ],
+  [
+    "getFollowingSources",
+    {
+      "name": "get_following_sources",
+      "scope": "boom.workspace.read",
+      "http": {
+        "method": "GET",
+        "path": "/api/v1/account/x/sources"
+      }
+    }
+  ],
+  [
     "loadFollowing",
     {
       "name": "load_following",

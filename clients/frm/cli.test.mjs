@@ -122,6 +122,8 @@ test('offline schema lookup accepts operation IDs, CLI commands, SDK methods and
  const directory=await mkdtemp(join(tmpdir(),'frm-cli-schema-'));t.after(()=>rm(directory,{recursive:true,force:true}));
  const credentials=join(directory,'credentials-must-not-exist');
  const cases=[
+  ['get_following_sources','get_following_sources'],['get-following-sources','get_following_sources'],['getFollowingSources','get_following_sources'],
+  ['verify_x_funding','verify_x_funding'],['verify-x-funding','verify_x_funding'],['verifyXFunding','verify_x_funding'],
   ['submit_candidates','submit_candidates'],['submit-candidates','submit_candidates'],['submitCandidates','submit_candidates'],
   ['request_x_connection','request_x_connection'],['request-x-connection','request_x_connection'],['requestXConnection','request_x_connection'],['connect-x','request_x_connection'],
   ['publish_post','publish_post'],['publish-post','publish_post'],['publishPost','publish_post'],['post','publish_post'],

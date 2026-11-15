@@ -295,6 +295,27 @@ node clients/frm/cli.mjs boom take-card '{"text":"My own words","author":"My nam
 
 `share` returns a canonical X post link or a supplied public HTTP(S) source link. `profile` returns an exact handle’s X profile as a view/follow handoff. `compose` returns an X review URL for an original, reply, quote or repost. It does not open or send it. `writing-context` prepares a local prompt and optional ChatGPT link using `own`, `question`, `example`, `disagree` or `shorter`; opening that link would send the supplied material to ChatGPT. `take-card` exports escaped text as an SVG image without fetching images or fonts. Use your own words and permitted source material.
 
+### Write from loaded X sources
+
+```sh
+node clients/frm/cli.mjs boom get-following-sources
+node clients/frm/cli.mjs boom writer-context
+# Only when this exact new load is authorized and current readiness permits it:
+node clients/frm/cli.mjs boom load-following '{"requestId":"my-explicit-following-load","confirmed":true}'
+```
+
+`getFollowingSources()` / `get_following_sources` returns up to 100 retained public Following snapshots for the signed-in account, without contacting X or consuming read allowance. Writer context includes the newest 20 under `followingSources`. Retain each post's exact source text, author, parent URL and retrieval time when drafting replies. These snapshots are not a live timeline or evidence of unseen thread context. Readiness and provider-use permission govern new loads; the client never paginates X or retries them automatically. After a lost response, inspect `get-request-status` and read the saved sources before taking another action.
+
+For the configured app owner only, `verifyXFunding()` / `verify_x_funding` reads the official usage-credit and usage endpoints once using existing granted access. It returns balances, free-credit expiries and limited usage evidence; it does not buy credits, change configuration, reset spend or establish exact provider-cycle instants. This is an explicit operator check, not part of ordinary drafting:
+
+```sh
+node clients/frm/cli.mjs boom verify-x-funding '{"requestId":"my-funding-evidence-check","confirmed":true}'
+# Equivalent generic operation:
+node clients/frm/cli.mjs boom call verify_x_funding '{"requestId":"my-funding-evidence-check","confirmed":true}'
+```
+
+Use one form for a chosen check. It requires `boom.provider.use` and server-verified owner identity; existing connections keep their scopes. A failed or interrupted result is not automatically retried. Inspect the same retained request before considering further work.
+
 ### Regenerate reviewed client contracts
 
 For product maintainers with the reviewed app checkout:

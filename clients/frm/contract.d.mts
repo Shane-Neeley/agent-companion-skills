@@ -41,6 +41,8 @@ export interface OperationInputs {
  "revoke_agent_connection": { "requestId": string; "confirmed": true; "grantId": string; "expectedClientId": string; "expectedExpiresAt": number; };
  "request_x_connection": { "requestId": string; "confirmed": true; "posting"?: boolean; "media"?: boolean; };
  "disconnect_x": { "requestId": string; "confirmed": true; "expectedUserId": string; "expectedConnectionVersion": string; };
+ "verify_x_funding": { "requestId": string; "confirmed": true; };
+ "get_following_sources": Record<string, never>;
  "load_following": { "requestId": string; "confirmed": true; };
  "get_drafting_status": Record<string, never>;
  "request_hosted_draft": { "requestId": string; "confirmed": true; "post": { "id": string; "url": string; "text": string; "handle"?: string; "media"?: Array<{ "type": "photo" | "video" | "animated_gif"; "url": string; "alt"?: string; }>; }; "form": "quote" | "reply"; "voice": "straight" | "deadpan" | "promo"; "intent"?: string; "draft"?: string; "approach"?: "own" | "question" | "example" | "disagree" | "shorter"; "hints"?: Array<"concise" | "calm" | "plain">; "reason"?: "" | "opinion" | "voice" | "generic" | "context"; };
@@ -98,6 +100,8 @@ export interface OperationOutputs {
  "revoke_agent_connection": { [key: string]: unknown; };
  "request_x_connection": { [key: string]: unknown; };
  "disconnect_x": { [key: string]: unknown; };
+ "verify_x_funding": { [key: string]: unknown; };
+ "get_following_sources": { [key: string]: unknown; };
  "load_following": { [key: string]: unknown; };
  "get_drafting_status": { [key: string]: unknown; };
  "request_hosted_draft": { [key: string]: unknown; };

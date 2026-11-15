@@ -47,6 +47,8 @@ Commands:
   boom list-drafts [JSON]           Inspect drafts and retained delivery history
   boom list-candidates [JSON]       Read your private feed and exact versions
   boom get-feed [JSON]              Read Home, For You, saved or Suggested in your agent
+  boom get-following-sources        Read loaded X sources without another provider read
+  boom verify-x-funding JSON        Owner-only provider funding evidence; changes no limits
   boom writer-context [JSON]       Read your notes, feedback and exact draft IDs
   boom submit-candidates @FILE      Save an agent-prepared JSON packet for review
   boom submit-candidates -         Read that packet from stdin
